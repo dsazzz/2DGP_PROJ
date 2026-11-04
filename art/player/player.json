@@ -1,0 +1,1269 @@
+{
+    "schema":  "gleam.player_sprite_draft.v1",
+    "quality":  "review-candidate",
+    "atlas":  "player-atlas.png",
+    "atlas_size":  [
+                       2048,
+                       1280
+                   ],
+    "cell_size":  [
+                      256,
+                      256
+                  ],
+    "pixel_art":  true,
+    "sampling":  "nearest",
+    "palette_colors":  32,
+    "anchor_px":  [
+                      132,
+                      178
+                  ],
+    "anchor_note":  "All frames cropped by the same (12,16) offset from 288px cells without resampling. Shared root (132,178). Draw center x-4 when facing right, x+4 when flipped; y+50.",
+    "frames":  [
+                   {
+                       "index":  0,
+                       "name":  "idle-sheet-1",
+                       "rect_top_left":  [
+                                             0,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                0,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  1,
+                       "name":  "idle-sheet-2",
+                       "rect_top_left":  [
+                                             256,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                256,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  2,
+                       "name":  "idle-sheet-3",
+                       "rect_top_left":  [
+                                             512,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                512,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  3,
+                       "name":  "idle-sheet-4",
+                       "rect_top_left":  [
+                                             768,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                768,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  4,
+                       "name":  "run-sheet-1",
+                       "rect_top_left":  [
+                                             1024,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1024,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  5,
+                       "name":  "run-sheet-2",
+                       "rect_top_left":  [
+                                             1280,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1280,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  6,
+                       "name":  "run-sheet-3",
+                       "rect_top_left":  [
+                                             1536,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1536,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  7,
+                       "name":  "run-sheet-4",
+                       "rect_top_left":  [
+                                             1792,
+                                             0,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1792,
+                                                1024,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  8,
+                       "name":  "run-sheet-5",
+                       "rect_top_left":  [
+                                             0,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                0,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  9,
+                       "name":  "run-sheet-6",
+                       "rect_top_left":  [
+                                             256,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                256,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  10,
+                       "name":  "run-sheet-7",
+                       "rect_top_left":  [
+                                             512,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                512,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  11,
+                       "name":  "run-sheet-8",
+                       "rect_top_left":  [
+                                             768,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                768,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  12,
+                       "name":  "jump-sheet-1",
+                       "rect_top_left":  [
+                                             1024,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1024,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  13,
+                       "name":  "jump-sheet-2",
+                       "rect_top_left":  [
+                                             1280,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1280,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  14,
+                       "name":  "jump-sheet-3",
+                       "rect_top_left":  [
+                                             1536,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1536,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  15,
+                       "name":  "jump-sheet-4",
+                       "rect_top_left":  [
+                                             1792,
+                                             256,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1792,
+                                                768,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  16,
+                       "name":  "jump-sheet-5",
+                       "rect_top_left":  [
+                                             0,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                0,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  17,
+                       "name":  "jump-sheet-6",
+                       "rect_top_left":  [
+                                             256,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                256,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  18,
+                       "name":  "jump-sheet-7",
+                       "rect_top_left":  [
+                                             512,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                512,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  19,
+                       "name":  "jump-sheet-8",
+                       "rect_top_left":  [
+                                             768,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                768,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  20,
+                       "name":  "dash_right-sheet-1",
+                       "rect_top_left":  [
+                                             1024,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1024,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  21,
+                       "name":  "dash_right-sheet-2",
+                       "rect_top_left":  [
+                                             1280,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1280,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  22,
+                       "name":  "dash_right-sheet-3",
+                       "rect_top_left":  [
+                                             1536,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1536,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  23,
+                       "name":  "dash_right-sheet-4",
+                       "rect_top_left":  [
+                                             1792,
+                                             512,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1792,
+                                                512,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  24,
+                       "name":  "dash_up_right-sheet-5",
+                       "rect_top_left":  [
+                                             0,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                0,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  25,
+                       "name":  "dash_up_right-sheet-6",
+                       "rect_top_left":  [
+                                             256,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                256,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  26,
+                       "name":  "dash_up_right-sheet-7",
+                       "rect_top_left":  [
+                                             512,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                512,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  27,
+                       "name":  "dash_up_right-sheet-8",
+                       "rect_top_left":  [
+                                             768,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                768,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  28,
+                       "name":  "dash_down_right-sheet-9",
+                       "rect_top_left":  [
+                                             1024,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1024,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  29,
+                       "name":  "dash_down_right-sheet-10",
+                       "rect_top_left":  [
+                                             1280,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1280,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  30,
+                       "name":  "dash_down_right-sheet-11",
+                       "rect_top_left":  [
+                                             1536,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1536,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  31,
+                       "name":  "dash_down_right-sheet-12",
+                       "rect_top_left":  [
+                                             1792,
+                                             768,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1792,
+                                                256,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  32,
+                       "name":  "dash_up-sheet-13",
+                       "rect_top_left":  [
+                                             0,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                0,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  33,
+                       "name":  "dash_up-sheet-14",
+                       "rect_top_left":  [
+                                             256,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                256,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  34,
+                       "name":  "dash_up-sheet-15",
+                       "rect_top_left":  [
+                                             512,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                512,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  35,
+                       "name":  "dash_up-sheet-16",
+                       "rect_top_left":  [
+                                             768,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                768,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  36,
+                       "name":  "dash_down-sheet-17",
+                       "rect_top_left":  [
+                                             1024,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1024,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  37,
+                       "name":  "dash_down-sheet-18",
+                       "rect_top_left":  [
+                                             1280,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1280,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  38,
+                       "name":  "dash_down-sheet-19",
+                       "rect_top_left":  [
+                                             1536,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1536,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   },
+                   {
+                       "index":  39,
+                       "name":  "dash_down-sheet-20",
+                       "rect_top_left":  [
+                                             1792,
+                                             1024,
+                                             256,
+                                             256
+                                         ],
+                       "pico2d_clip_rect":  [
+                                                1792,
+                                                0,
+                                                256,
+                                                256
+                                            ],
+                       "anchor_px":  [
+                                         132,
+                                         178
+                                     ]
+                   }
+               ],
+    "clips":  {
+                  "idle":  {
+                               "frames":  [
+                                              0,
+                                              1,
+                                              2,
+                                              3
+                                          ],
+                               "duration_ms":  [
+                                                   200,
+                                                   200,
+                                                   200,
+                                                   200
+                                               ],
+                               "ticks":  [
+                                             12,
+                                             12,
+                                             12,
+                                             12
+                                         ],
+                               "loop":  true,
+                               "loop_policy":  "cycle",
+                               "total_duration_ms":  800,
+                               "events":  [
+
+                                          ]
+                           },
+                  "run":  {
+                              "frames":  [
+                                             4,
+                                             5,
+                                             6,
+                                             7,
+                                             8,
+                                             9,
+                                             10,
+                                             11
+                                         ],
+                              "duration_ms":  [
+                                                  83,
+                                                  84,
+                                                  83,
+                                                  83,
+                                                  84,
+                                                  83,
+                                                  83,
+                                                  84
+                                              ],
+                              "ticks":  [
+                                            5,
+                                            5,
+                                            5,
+                                            5,
+                                            5,
+                                            5,
+                                            5,
+                                            5
+                                        ],
+                              "loop":  true,
+                              "loop_policy":  "cycle",
+                              "total_duration_ms":  667,
+                              "events":  [
+
+                                         ]
+                          },
+                  "jump_preview":  {
+                                       "frames":  [
+                                                      12,
+                                                      13,
+                                                      14,
+                                                      15,
+                                                      16,
+                                                      17,
+                                                      18,
+                                                      19
+                                                  ],
+                                       "duration_ms":  [
+                                                           33,
+                                                           34,
+                                                           66,
+                                                           67,
+                                                           83,
+                                                           84,
+                                                           33,
+                                                           50
+                                                       ],
+                                       "ticks":  [
+                                                     2,
+                                                     2,
+                                                     4,
+                                                     4,
+                                                     5,
+                                                     5,
+                                                     2,
+                                                     3
+                                                 ],
+                                       "loop":  false,
+                                       "loop_policy":  "oneshot",
+                                       "total_duration_ms":  450,
+                                       "events":  [
+
+                                                  ]
+                                   },
+                  "jump_start":  {
+                                     "frames":  [
+                                                    12,
+                                                    13
+                                                ],
+                                     "duration_ms":  [
+                                                         33,
+                                                         34
+                                                     ],
+                                     "ticks":  [
+                                                   2,
+                                                   2
+                                               ],
+                                     "loop":  false,
+                                     "loop_policy":  "oneshot",
+                                     "total_duration_ms":  67,
+                                     "events":  [
+
+                                                ]
+                                 },
+                  "jump_rise":  {
+                                    "frames":  [
+                                                   14,
+                                                   15
+                                               ],
+                                    "duration_ms":  [
+                                                        67,
+                                                        66
+                                                    ],
+                                    "ticks":  [
+                                                  4,
+                                                  4
+                                              ],
+                                    "loop":  false,
+                                    "loop_policy":  "oneshot",
+                                    "total_duration_ms":  133,
+                                    "events":  [
+
+                                               ]
+                                },
+                  "jump_apex":  {
+                                    "frames":  [
+                                                   16
+                                               ],
+                                    "duration_ms":  [
+                                                        100
+                                                    ],
+                                    "ticks":  [
+                                                  6
+                                              ],
+                                    "loop":  false,
+                                    "loop_policy":  "oneshot",
+                                    "total_duration_ms":  100,
+                                    "events":  [
+
+                                               ]
+                                },
+                  "fall":  {
+                               "frames":  [
+                                              17
+                                          ],
+                               "duration_ms":  [
+                                                   100
+                                               ],
+                               "ticks":  [
+                                             6
+                                         ],
+                               "loop":  false,
+                               "loop_policy":  "oneshot",
+                               "total_duration_ms":  100,
+                               "events":  [
+
+                                          ]
+                           },
+                  "land":  {
+                               "frames":  [
+                                              18,
+                                              19
+                                          ],
+                               "duration_ms":  [
+                                                   50,
+                                                   50
+                                               ],
+                               "ticks":  [
+                                             3,
+                                             3
+                                         ],
+                               "loop":  false,
+                               "loop_policy":  "oneshot",
+                               "total_duration_ms":  100,
+                               "events":  [
+
+                                          ]
+                           },
+                  "dash_right":  {
+                                     "frames":  [
+                                                    20,
+                                                    21,
+                                                    22,
+                                                    23
+                                                ],
+                                     "duration_ms":  [
+                                                         17,
+                                                         50,
+                                                         33,
+                                                         17
+                                                     ],
+                                     "ticks":  [
+                                                   1,
+                                                   3,
+                                                   2,
+                                                   1
+                                               ],
+                                     "loop":  false,
+                                     "loop_policy":  "oneshot",
+                                     "total_duration_ms":  117,
+                                     "events":  [
+                                                    {
+                                                        "name":  "custom:dash_active",
+                                                        "at_ms":  17,
+                                                        "at":  1,
+                                                        "position":  1,
+                                                        "at_tick":  1
+                                                    }
+                                                ]
+                                 },
+                  "dash_up_right":  {
+                                        "frames":  [
+                                                       24,
+                                                       25,
+                                                       26,
+                                                       27
+                                                   ],
+                                        "duration_ms":  [
+                                                            17,
+                                                            50,
+                                                            33,
+                                                            17
+                                                        ],
+                                        "ticks":  [
+                                                      1,
+                                                      3,
+                                                      2,
+                                                      1
+                                                  ],
+                                        "loop":  false,
+                                        "loop_policy":  "oneshot",
+                                        "total_duration_ms":  117,
+                                        "events":  [
+                                                       {
+                                                           "name":  "custom:dash_active",
+                                                           "at_ms":  17,
+                                                           "at":  1,
+                                                           "position":  1,
+                                                           "at_tick":  1
+                                                       }
+                                                   ]
+                                    },
+                  "dash_down_right":  {
+                                          "frames":  [
+                                                         28,
+                                                         29,
+                                                         30,
+                                                         31
+                                                     ],
+                                          "duration_ms":  [
+                                                              17,
+                                                              50,
+                                                              33,
+                                                              17
+                                                          ],
+                                          "ticks":  [
+                                                        1,
+                                                        3,
+                                                        2,
+                                                        1
+                                                    ],
+                                          "loop":  false,
+                                          "loop_policy":  "oneshot",
+                                          "total_duration_ms":  117,
+                                          "events":  [
+                                                         {
+                                                             "name":  "custom:dash_active",
+                                                             "at_ms":  17,
+                                                             "at":  1,
+                                                             "position":  1,
+                                                             "at_tick":  1
+                                                         }
+                                                     ]
+                                      },
+                  "dash_up":  {
+                                  "frames":  [
+                                                 32,
+                                                 33,
+                                                 34,
+                                                 35
+                                             ],
+                                  "duration_ms":  [
+                                                      17,
+                                                      50,
+                                                      33,
+                                                      17
+                                                  ],
+                                  "ticks":  [
+                                                1,
+                                                3,
+                                                2,
+                                                1
+                                            ],
+                                  "loop":  false,
+                                  "loop_policy":  "oneshot",
+                                  "total_duration_ms":  117,
+                                  "events":  [
+                                                 {
+                                                     "name":  "custom:dash_active",
+                                                     "at_ms":  17,
+                                                     "at":  1,
+                                                     "position":  1,
+                                                     "at_tick":  1
+                                                 }
+                                             ]
+                              },
+                  "dash_down":  {
+                                    "frames":  [
+                                                   36,
+                                                   37,
+                                                   38,
+                                                   39
+                                               ],
+                                    "duration_ms":  [
+                                                        17,
+                                                        50,
+                                                        33,
+                                                        17
+                                                    ],
+                                    "ticks":  [
+                                                  1,
+                                                  3,
+                                                  2,
+                                                  1
+                                              ],
+                                    "loop":  false,
+                                    "loop_policy":  "oneshot",
+                                    "total_duration_ms":  117,
+                                    "events":  [
+                                                   {
+                                                       "name":  "custom:dash_active",
+                                                       "at_ms":  17,
+                                                       "at":  1,
+                                                       "position":  1,
+                                                       "at_tick":  1
+                                                   }
+                                               ]
+                                },
+                  "fall_air":  {
+                                   "frames":  [
+                                                  16
+                                              ],
+                                   "duration_ms":  [
+                                                       100
+                                                   ],
+                                   "ticks":  [
+                                                 6
+                                             ],
+                                   "loop":  false,
+                                   "loop_policy":  "oneshot",
+                                   "total_duration_ms":  100,
+                                   "events":  [
+
+                                              ]
+                               }
+              },
+    "dash_directions":  {
+                            "right":  {
+                                          "clip":  "dash_right",
+                                          "flip_x":  false
+                                      },
+                            "left":  {
+                                         "clip":  "dash_right",
+                                         "flip_x":  true
+                                     },
+                            "up_right":  {
+                                             "clip":  "dash_up_right",
+                                             "flip_x":  false
+                                         },
+                            "up_left":  {
+                                            "clip":  "dash_up_right",
+                                            "flip_x":  true
+                                        },
+                            "down_right":  {
+                                               "clip":  "dash_down_right",
+                                               "flip_x":  false
+                                           },
+                            "down_left":  {
+                                              "clip":  "dash_down_right",
+                                              "flip_x":  true
+                                          },
+                            "up":  {
+                                       "clip":  "dash_up",
+                                       "flip_x":  "match_facing"
+                                   },
+                            "down":  {
+                                         "clip":  "dash_down",
+                                         "flip_x":  "match_facing"
+                                     }
+                        },
+    "air_state_policy":  "Play jump_start once; rise/apex/fall hold their last frame until physics changes state; land is cancellable. jump_preview is only a visual review sequence.",
+    "dash_policy":  "An animation must never delay the gameplay dash; input starts velocity immediately. All frames are cancellable. Recovery is optional.",
+    "art_source":  "existing",
+    "route":  "existing-atlas-fixed-affine-nearest",
+    "model_returned":  null,
+    "estimateUsd":  null,
+    "render_config":  {
+                          "notes":  "Size corrections already baked into pixels. Common 256px cells, anchor (132,178). No per-action corrections. Cropped without scaling from 288px version.",
+                          "fall_anticipation_seconds":  0.08,
+                          "render_profiles":  {
+                                                  "idle":  {
+                                                               "scale":  1,
+                                                               "root_x":  132,
+                                                               "foot_y":  178
+                                                           },
+                                                  "run":  {
+                                                              "scale":  1,
+                                                              "root_x":  132,
+                                                              "foot_y":  178
+                                                          },
+                                                  "jump":  {
+                                                               "scale":  1,
+                                                               "root_x":  132,
+                                                               "foot_y":  178
+                                                           },
+                                                  "dash":  {
+                                                               "scale":  1,
+                                                               "root_x":  132,
+                                                               "foot_y":  178
+                                                           },
+                                                  "dash_vertical":  {
+                                                                        "scale":  1,
+                                                                        "root_x":  132,
+                                                                        "foot_y":  178
+                                                                    }
+                                              }
+                      }
+}
