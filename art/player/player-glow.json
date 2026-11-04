@@ -1,0 +1,27 @@
+{
+  "schema": "gleam.player_glow.v2",
+  "method": "Exact original v1 Canvas shadowColor/shadowBlur; source drawn offscreen to isolate shadow.",
+  "source_atlas": "player-atlas.png",
+  "source_sha256": "391580066bc0027c3c143e346af121ffb4fcee62687b37b7115b8a92c57c0eee",
+  "source_cell_size": 256,
+  "cell_size": 352,
+  "padding": 48,
+  "presets": [
+    {
+      "file": "player-glow-white.png",
+      "color": "#fff1dd",
+      "blur": 7
+    },
+    {
+      "file": "player-glow.png",
+      "color": "#ffc449",
+      "blur": 15
+    },
+    {
+      "file": "player-glow-cyan.png",
+      "color": "#8aefff",
+      "blur": 24
+    }
+  ],
+  "active_preset": 1
+}
