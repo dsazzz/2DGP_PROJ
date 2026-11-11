@@ -1,4 +1,4 @@
-"""플레이어의 기존 애니메이션과 시각 효과. 이동과 행동은 이후 연결."""
+"""플레이어의 기본 좌우 이동과 기존 애니메이션·시각 효과."""
 import json
 import math
 
@@ -41,7 +41,7 @@ class Animation:
 
 
 class Player:
-    """발 기준 위치에 표시한다. 현재 update는 표현 시간만 갱신한다."""
+    """발 기준 월드 위치를 사용한다. 입력 키와 화면 크기는 알지 못한다."""
 
     def __init__(self, x=320, y=128, zoom=0.5):
         self.assets = ART_ROOT / 'player'
@@ -49,6 +49,8 @@ class Player:
         self.glow = json.loads((self.assets / 'player-glow.json').read_text(encoding='utf-8'))
         self.animation = Animation(self.data)
         self.x, self.y, self.zoom = x, y, zoom
+        self.move_direction = 0
+        self.move_speed = 180.0  # px/s. 조작 확인용 초깃값.
         self.flip = False
         self.appearance = self.glow['active_preset'] + 1
         self.elapsed = 0.0
@@ -80,7 +82,17 @@ class Player:
     def set_appearance(self, stage):
         self.appearance = stage
 
+    def set_move_direction(self, direction):
+        """좌(-1)·정지(0)·우(1) 입력을 받아 즉시 이동 방향을 바꾼다."""
+        self.move_direction = (direction > 0) - (direction < 0)
+        if self.move_direction:
+            self.flip = self.move_direction < 0
+        name = 'run' if self.move_direction else 'idle'
+        if self.animation.name != name:
+            self.play(name)
+
     def update(self, dt):
+        self.x += self.move_direction * self.move_speed * dt
         self.elapsed += dt
         self.clip_elapsed += dt
         self.animation.update(dt)
