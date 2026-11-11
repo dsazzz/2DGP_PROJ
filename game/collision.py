@@ -44,12 +44,15 @@ class MoveResult:
 
 
 def move_and_collide(box: AABB, dx: float, dy: float,
-                     solids: Iterable[AABB]) -> MoveResult:
+                     solids: Iterable[AABB], *,
+                     one_way: Iterable[AABB] = ()) -> MoveResult:
     """x축 다음 y축 순서로 이동한다. 입력 상자와 지형은 변경하지 않는다.
 
     각 축의 이동 구간 전체에서 가장 가까운 면을 찾는다. 시작할 때 이미
-    지형 안에 겹친 배치는 지원하지 않으며 오류로 알린다. 통과·이동 발판,
-    곡선·회전 지형, 대각선 직선 경로의 연속 충돌 판정은 후속 범위다.
+    일반 지형 안에 겹친 배치는 지원하지 않으며 오류로 알린다.
+    one_way는 하강 중 발이 윗면을 지날 때만 막는다. 상승·옆면과 이미
+    윗면 아래에서 시작한 이동은 막지 않는다. 이동 발판·곡선·회전 지형,
+    대각선 직선 경로의 연속 충돌 판정은 후속 범위다.
     """
     if not math.isfinite(dx) or not math.isfinite(dy):
         raise ValueError('Movement must be finite')
@@ -80,6 +83,14 @@ def move_and_collide(box: AABB, dx: float, dy: float,
         elif dy < 0 and box.bottom >= solid.top and y <= solid.top:
             y = max(y, solid.top)
             hit_bottom = True
+
+    if dy < 0:
+        for platform in one_way:
+            if x >= platform.right or x + box.width <= platform.left:
+                continue
+            if box.bottom >= platform.top and y <= platform.top:
+                y = max(y, platform.top)
+                hit_bottom = True
 
     return MoveResult(AABB(x, y, box.width, box.height),
                       hit_left, hit_right, hit_bottom, hit_top)
