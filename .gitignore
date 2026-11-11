@@ -1,0 +1,50 @@
+# Only include runtime folders, dependency setup and this ignore policy.
+# Everything else at the project root (docs, README, local tools, etc.) is ignored.
+/*
+!/.gitignore
+!/game/
+!/art/
+!/requirements.txt
+
+# Original JavaScript is kept locally; the game uses the Python port.
+/game/vfx/**/*.js
+/game/vfx/package.json
+# The Python port's LICENSE and NOTICE.md remain tracked in game/vfx/.
+
+# Python environments and caches (native runtime libraries stay trackable)
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+
+# JavaScript dependencies and package-manager caches
+node_modules/
+.npm/
+.pnpm-store/
+
+# Build and scratch outputs
+build/
+dist/
+*.egg-info/
+tmp/
+temp/
+*.log
+*.tmp
+
+# Local secrets
+.env
+.env.*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -2,7 +2,7 @@
   "schema": "gleam.player_glow.v2",
   "method": "Exact original v1 Canvas shadowColor/shadowBlur; source drawn offscreen to isolate shadow.",
   "source_atlas": "player-atlas.png",
-  "source_sha256": "391580066bc0027c3c143e346af121ffb4fcee62687b37b7115b8a92c57c0eee",
+  "source_sha256": "b65f150c26d2bc6dd5a59f2fac1ef4e48a56fa9fb2cddc4069e24559ab444374",
   "source_cell_size": 256,
   "cell_size": 352,
   "padding": 48,
@@ -23,5 +23,6 @@
       "blur": 24
     }
   ],
-  "active_preset": 1
+  "active_preset": 1,
+  "layout_note": "Wall cling removed. Death frames shifted left one cell; final cell transparent. Existing death glows preserved."
 }
