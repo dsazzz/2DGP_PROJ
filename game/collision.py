@@ -1,0 +1,85 @@
+"""월드 좌표에서 정적 사각형 지형과의 축별 이동을 해결한다."""
+from dataclasses import dataclass
+import math
+from typing import Iterable
+
+
+@dataclass(frozen=True)
+class AABB:
+    """왼쪽 아래 기준 상자. 변만 맞닿는 것은 겹침으로 보지 않는다."""
+
+    left: float
+    bottom: float
+    width: float
+    height: float
+
+    def __post_init__(self):
+        if not all(math.isfinite(value) for value in (
+            self.left, self.bottom, self.width, self.height,
+        )) or self.width <= 0 or self.height <= 0:
+            raise ValueError('AABB needs finite coordinates and positive dimensions')
+
+    @property
+    def right(self):
+        return self.left + self.width
+
+    @property
+    def top(self):
+        return self.bottom + self.height
+
+    def overlaps(self, other):
+        return (self.left < other.right and self.right > other.left
+                and self.bottom < other.top and self.top > other.bottom)
+
+
+@dataclass(frozen=True)
+class MoveResult:
+    """이동 후 상자와 이번 이동에서 닿은 면. 속도·게임 상태는 바꾸지 않는다."""
+
+    box: AABB
+    hit_left: bool = False
+    hit_right: bool = False
+    hit_bottom: bool = False
+    hit_top: bool = False
+
+
+def move_and_collide(box: AABB, dx: float, dy: float,
+                     solids: Iterable[AABB]) -> MoveResult:
+    """x축 다음 y축 순서로 이동한다. 입력 상자와 지형은 변경하지 않는다.
+
+    각 축의 이동 구간 전체에서 가장 가까운 면을 찾는다. 시작할 때 이미
+    지형 안에 겹친 배치는 지원하지 않으며 오류로 알린다. 통과·이동 발판,
+    곡선·회전 지형, 대각선 직선 경로의 연속 충돌 판정은 후속 범위다.
+    """
+    if not math.isfinite(dx) or not math.isfinite(dy):
+        raise ValueError('Movement must be finite')
+    solids = tuple(solids)
+    if any(box.overlaps(solid) for solid in solids):
+        raise ValueError('The starting box overlaps a solid')
+
+    x = box.left + dx
+    hit_left = hit_right = False
+    for solid in solids:
+        if box.bottom >= solid.top or box.top <= solid.bottom:
+            continue
+        if dx > 0 and box.right <= solid.left and x + box.width >= solid.left:
+            x = min(x, solid.left - box.width)
+            hit_right = True
+        elif dx < 0 and box.left >= solid.right and x <= solid.right:
+            x = max(x, solid.right)
+            hit_left = True
+
+    y = box.bottom + dy
+    hit_bottom = hit_top = False
+    for solid in solids:
+        if x >= solid.right or x + box.width <= solid.left:
+            continue
+        if dy > 0 and box.top <= solid.bottom and y + box.height >= solid.bottom:
+            y = min(y, solid.bottom - box.height)
+            hit_top = True
+        elif dy < 0 and box.bottom >= solid.top and y <= solid.top:
+            y = max(y, solid.top)
+            hit_bottom = True
+
+    return MoveResult(AABB(x, y, box.width, box.height),
+                      hit_left, hit_right, hit_bottom, hit_top)
