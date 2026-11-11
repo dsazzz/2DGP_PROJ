@@ -1,4 +1,4 @@
-"""월드 좌표에서 정적 사각형 지형과의 축별 이동을 해결한다."""
+"""정적 사각형 지형의 축별 이동과 직선 이동 구간 충돌을 해결한다."""
 from dataclasses import dataclass
 import math
 from typing import Iterable
@@ -52,7 +52,7 @@ def move_and_collide(box: AABB, dx: float, dy: float,
     일반 지형 안에 겹친 배치는 지원하지 않으며 오류로 알린다.
     one_way는 하강 중 발이 윗면을 지날 때만 막는다. 상승·옆면과 이미
     윗면 아래에서 시작한 이동은 막지 않는다. 이동 발판·곡선·회전 지형,
-    대각선 직선 경로의 연속 충돌 판정은 후속 범위다.
+    직선 경로의 첫 충돌에서 멈출 때는 sweep_and_collide를 사용한다.
     """
     if not math.isfinite(dx) or not math.isfinite(dy):
         raise ValueError('Movement must be finite')
@@ -92,5 +92,70 @@ def move_and_collide(box: AABB, dx: float, dy: float,
                 y = max(y, platform.top)
                 hit_bottom = True
 
+    return MoveResult(AABB(x, y, box.width, box.height),
+                      hit_left, hit_right, hit_bottom, hit_top)
+
+
+def _axis_times(low, high, delta, other_low, other_high):
+    if delta > 0:
+        return (other_low - high) / delta, (other_high - low) / delta
+    if delta < 0:
+        return (other_high - low) / delta, (other_low - high) / delta
+    if high <= other_low or low >= other_high:
+        return math.inf, -math.inf
+    return -math.inf, math.inf
+
+
+def sweep_and_collide(box: AABB, dx: float, dy: float,
+                      solids: Iterable[AABB], *,
+                      one_way: Iterable[AABB] = ()) -> MoveResult:
+    """직선 구간의 첫 접촉에서 두 축을 함께 멈춘다. 남은 이동으로 미끄러지지 않는다."""
+    if not math.isfinite(dx) or not math.isfinite(dy):
+        raise ValueError
+    solids = tuple(solids)
+    if any(box.overlaps(solid) for solid in solids):
+        raise ValueError
+
+    candidates = []
+    for solid in solids:
+        enter_x, exit_x = _axis_times(box.left, box.right, dx, solid.left, solid.right)
+        enter_y, exit_y = _axis_times(box.bottom, box.top, dy, solid.bottom, solid.top)
+        enter, leave = max(enter_x, enter_y), min(exit_x, exit_y)
+        # 한 점을 스치고 멀어지는 경로는 내부로 들어가지 않으므로 막지 않는다.
+        if 0 <= enter <= 1 and enter < leave:
+            hit_x = math.isclose(enter_x, enter, rel_tol=0, abs_tol=1e-10)
+            hit_y = math.isclose(enter_y, enter, rel_tol=0, abs_tol=1e-10)
+            candidates.append((enter, solid, hit_x, hit_y))
+
+    if dy < 0:
+        for platform in one_way:
+            if box.bottom < platform.top:
+                continue
+            time = (platform.top - box.bottom) / dy
+            if 0 <= time <= 1:
+                x = box.left + dx * time
+                # 발이 윗면을 통과하는 순간의 가로 범위로 판정한다.
+                if x < platform.right and x + box.width > platform.left:
+                    candidates.append((time, platform, False, True))
+
+    time = min((candidate[0] for candidate in candidates), default=1.0)
+    x, y = box.left + dx * time, box.bottom + dy * time
+    hit_left = hit_right = hit_bottom = hit_top = False
+    for at, solid, hit_x, hit_y in candidates:
+        if not math.isclose(at, time, rel_tol=0, abs_tol=1e-10):
+            continue
+        # 접촉면에 맞춰 다음 갱신에서 반올림 오차로 파고들지 않게 한다.
+        if hit_x and dx > 0:
+            x = min(x, solid.left - box.width)
+            hit_right = True
+        elif hit_x and dx < 0:
+            x = max(x, solid.right)
+            hit_left = True
+        if hit_y and dy > 0:
+            y = min(y, solid.bottom - box.height)
+            hit_top = True
+        elif hit_y and dy < 0:
+            y = max(y, solid.top)
+            hit_bottom = True
     return MoveResult(AABB(x, y, box.width, box.height),
                       hit_left, hit_right, hit_bottom, hit_top)

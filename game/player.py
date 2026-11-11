@@ -6,6 +6,7 @@ import pico2d as p
 from transitions import Machine
 
 from game.paths import ART_ROOT
+from game.collision import AABB, MoveResult, move_and_collide, sweep_and_collide
 from game.vfx.sparkles import Sparkles
 from game.vfx.motion import MotionEchoes
 from game.vfx.pico import PicoEffect, load_rgba
@@ -59,12 +60,14 @@ class Player:
         {'trigger': 'reset_state', 'source': '*', 'dest': 'IDLE', 'before': '_reset_values'},
     ]
 
-    def __init__(self, x=320, y=128, zoom=0.5):
+    def __init__(self, x=320, y=128, zoom=0.5, body_size=(32, 48)):
         self.assets = ART_ROOT / 'player'
         self.data = json.loads((self.assets / 'player.json').read_text(encoding='utf-8-sig'))
         self.glow = json.loads((self.assets / 'player-glow.json').read_text(encoding='utf-8'))
         self.animation = Animation(self.data)
         self.x, self.y, self.zoom = x, y, zoom
+        # 월드 단위의 임시 몸체 크기. 그림 배율·프레임·꼬리와 독립적이다.
+        self.body_width, self.body_height = body_size
         self.start_x, self.start_y = x, y
         self.move_speed = MOVE_SPEED
         self.flip = False
@@ -79,7 +82,7 @@ class Player:
         self.echoes = None
         self.samples = []
         self.effect_angle = 0.0
-        # 예상 착지 높이는 외부에서 알려준다. 없으면 공중 낙하 자세를 쓴다.
+        # 가까운 미래의 지형 접촉으로 착지 준비 자세를 선택한다.
         self.landing_y = None
         self.machine = Machine(
             model=self, states=self.STATES, transitions=self.TRANSITIONS,
@@ -100,6 +103,8 @@ class Player:
         self.dash_left = self.dash_vx = self.dash_vy = 0.0
         self.jump_age, self.land_left = 10.0, 0.0
         self.elapsed = 0.0
+        self.contact = MoveResult(self.body)
+        self.landing_y = None
         if self.sparkles is not None:
             self.sparkles.time_ms = 0.0
 
@@ -152,7 +157,7 @@ class Player:
             self.start_dash(dx, dy)
 
     def land(self, height):
-        """외부 접촉 판정에서 착지를 알린다. 지형 판정은 호출한 쪽에서 한다."""
+        """실제 아래쪽 접촉에서 착지와 자원 회복을 반영한다."""
         if not self.grounded:
             self.dashes = 2
             self.can_jump = True
@@ -181,33 +186,75 @@ class Player:
         """좌(-1)·정지(0)·우(1) 의도를 저장한다. 행동 전환은 update에서 한다."""
         self.move_direction = (direction > 0) - (direction < 0)
 
-    def update(self, dt, *, resolve_motion=None):
-        self._update_motion(dt)
-        if resolve_motion is not None:
-            resolve_motion(self)
-        else:
-            self.grounded = False
+    @property
+    def body(self):
+        return AABB(self.x - self.body_width / 2, self.y,
+                    self.body_width, self.body_height)
+
+    def update(self, dt, solids=(), *, one_way=()):
+        solids, one_way = tuple(solids), tuple(one_way)
+        self.contact = MoveResult(self.body)
+        self._update_motion(dt, solids, one_way)
+        self.landing_y = None
+        if self.vy <= 0:
+            t = FALL_PREPARE_TIME
+            future = move_and_collide(
+                self.body, self.move_direction * self.move_speed * t,
+                self.vy * t - GRAVITY * t * t / 2, solids, one_way=one_way,
+            )
+            if future.hit_bottom:
+                self.landing_y = future.box.bottom
         self._update_state()
         self.update_visuals(dt)
 
-    def _update_motion(self, dt):
+    def _move(self, dx, dy, solids, one_way, *, straight=False):
+        solve = sweep_and_collide if straight else move_and_collide
+        result = solve(self.body, dx, dy, solids, one_way=one_way)
+        self.x = result.box.left + self.body_width / 2
+        self.y = result.box.bottom
+        bottom = result.hit_bottom
+        if not bottom and dy <= 0:
+            # 수평 대시도 바닥 지지를 검사한다. 옆면 접촉은 접지로 보지 않는다.
+            support = move_and_collide(self.body, 0, -1e-6, solids, one_way=one_way)
+            if support.hit_bottom:
+                bottom = True
+                self.y = support.box.bottom
+        if bottom:
+            self.land(self.y)
+        else:
+            self.grounded = False
+        if result.hit_top:
+            self.vy = 0.0
+        previous = self.contact
+        self.contact = MoveResult(
+            self.body, previous.hit_left or result.hit_left,
+            previous.hit_right or result.hit_right,
+            previous.hit_bottom or bottom, previous.hit_top or result.hit_top,
+        )
+        return result
+
+    def _update_motion(self, dt, solids, one_way):
         self.jump_age += dt
         self.land_left = max(0.0, self.land_left - dt)
         # 대시 종료 시점을 나누어 프레임 주기에 따라 이동 거리가 달라지지 않게 한다.
         dash_dt = min(dt, self.dash_left)
         if dash_dt:
-            self.x += self.dash_vx * dash_dt
-            self.y += self.dash_vy * dash_dt
+            result = self._move(self.dash_vx * dash_dt, self.dash_vy * dash_dt,
+                                solids, one_way, straight=True)
             self.dash_left = max(0.0, self.dash_left - dash_dt)
-            if self.dash_vy > 0:
-                self.grounded = False
+            if (result.hit_left or result.hit_right or result.hit_top
+                    or result.hit_bottom and self.dash_vy < 0):
+                self.dash_left = self.dash_vx = self.dash_vy = 0.0
         normal_dt = dt - dash_dt
         if normal_dt:
-            self.x += self.move_direction * self.move_speed * normal_dt
-            self.y += self.vy * normal_dt - GRAVITY * normal_dt ** 2 / 2
+            dy = self.vy * normal_dt - GRAVITY * normal_dt ** 2 / 2
             self.vy -= GRAVITY * normal_dt
+            self._move(self.move_direction * self.move_speed * normal_dt, dy,
+                       solids, one_way)
             if self.move_direction:
                 self.facing = self.move_direction
+        elif not dash_dt:
+            self._move(0, 0, solids, one_way)
 
     def _update_state(self):
         if self.state == 'DASH' and self.dash_left > 0:
@@ -223,7 +270,7 @@ class Player:
             elif self.state != 'IDLE':
                 self.stop_run()
         else:
-            if (self.vy < 0 or self.state == 'DASH') and self.state != 'FALL':
+            if (self.vy <= 0 or self.state == 'DASH') and self.state != 'FALL':
                 self.start_fall()
             self._update_air_animation()
 
