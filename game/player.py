@@ -1,4 +1,4 @@
-"""기존 플레이어의 이동·점프·8방향 대시와 애니메이션·시각 효과."""
+"""플레이어의 이동·점프·대시·사망 상태와 애니메이션·시각 효과."""
 import json
 import math
 
@@ -10,10 +10,15 @@ from game.collision import AABB, MoveResult, move_and_collide, sweep_and_collide
 from game.vfx.sparkles import Sparkles
 from game.vfx.motion import MotionEchoes
 from game.vfx.pico import PicoEffect, load_rgba
+from game.vfx.death import FREEZE_TIME, DURATION as DEATH_DURATION, recoil_offset
 
 
-MOVE_SPEED, JUMP_SPEED, GRAVITY, DASH_SPEED = 310, 690, 1800, 1450
-FALL_PREPARE_TIME = .08
+SETTINGS = json.loads((ART_ROOT / 'player' / 'player-settings.json').read_text(encoding='utf-8'))
+MOVEMENT = SETTINGS['movement']
+MOVE_SPEED, JUMP_SPEED, GRAVITY, DASH_SPEED = (
+    MOVEMENT[key] for key in ('move_speed', 'jump_speed', 'gravity', 'dash_speed')
+)
+FALL_PREPARE_TIME = MOVEMENT['fall_prepare_time']
 
 
 class Animation:
@@ -49,25 +54,27 @@ class Animation:
 class Player:
     """키 처리는 외부에서 하고, 전달받은 방향과 발 기준 월드 좌표로 이동한다."""
 
-    STATES = ['IDLE', 'RUN', 'JUMP', 'FALL', 'DASH', 'LAND']
+    ACTIVE_STATES = ['IDLE', 'RUN', 'JUMP', 'FALL', 'DASH', 'LAND']
+    STATES = ACTIVE_STATES + ['DEAD']
     TRANSITIONS = [
         {'trigger': 'start_run', 'source': ['IDLE', 'LAND', 'JUMP', 'FALL', 'DASH'], 'dest': 'RUN'},
         {'trigger': 'stop_run', 'source': ['RUN', 'LAND', 'JUMP', 'FALL', 'DASH'], 'dest': 'IDLE'},
-        {'trigger': 'start_jump', 'source': '*', 'dest': 'JUMP'},
+        {'trigger': 'start_jump', 'source': ACTIVE_STATES, 'dest': 'JUMP'},
         {'trigger': 'start_fall', 'source': ['IDLE', 'RUN', 'JUMP', 'LAND', 'DASH'], 'dest': 'FALL'},
-        {'trigger': 'start_dash', 'source': '*', 'dest': 'DASH'},
+        {'trigger': 'start_dash', 'source': ACTIVE_STATES, 'dest': 'DASH'},
         {'trigger': 'touch_down', 'source': ['IDLE', 'RUN', 'JUMP', 'FALL', 'DASH'], 'dest': 'LAND'},
+        {'trigger': 'start_death', 'source': ACTIVE_STATES, 'dest': 'DEAD'},
         {'trigger': 'reset_state', 'source': '*', 'dest': 'IDLE', 'before': '_reset_values'},
     ]
 
-    def __init__(self, x=320, y=128, zoom=0.5, body_size=(32, 48)):
+    def __init__(self, x=320, y=128, zoom=0.5, body_size=None):
         self.assets = ART_ROOT / 'player'
         self.data = json.loads((self.assets / 'player.json').read_text(encoding='utf-8-sig'))
         self.glow = json.loads((self.assets / 'player-glow.json').read_text(encoding='utf-8'))
         self.animation = Animation(self.data)
         self.x, self.y, self.zoom = x, y, zoom
         # 월드 단위의 임시 몸체 크기. 그림 배율·프레임·꼬리와 독립적이다.
-        self.body_width, self.body_height = body_size
+        self.body_width, self.body_height = SETTINGS['body_size'] if body_size is None else body_size
         self.start_x, self.start_y = x, y
         self.move_speed = MOVE_SPEED
         self.flip = False
@@ -84,6 +91,10 @@ class Player:
         self.effect_angle = 0.0
         # 가까운 미래의 지형 접촉으로 착지 준비 자세를 선택한다.
         self.landing_y = None
+        self.death_effect = None
+        self.death_elapsed = 0.0
+        self.death_origin = (x, y)
+        self.death_direction = -1
         self.machine = Machine(
             model=self, states=self.STATES, transitions=self.TRANSITIONS,
             initial='IDLE', auto_transitions=False,
@@ -94,12 +105,16 @@ class Player:
         self.reset_state()
 
     def _reset_values(self):
+        if self.death_effect is not None:
+            self.death_effect.close()
+            self.death_effect = None
+        self.death_elapsed = 0.0
         self.x, self.y = self.start_x, self.start_y
         self.move_direction = 0
         self.vy = 0.0
         self.facing, self.flip = 1, False
         self.grounded = self.can_jump = True
-        self.dashes = 2
+        self.dashes = MOVEMENT['dash_charges']
         self.dash_left = self.dash_vx = self.dash_vy = 0.0
         self.jump_age, self.land_left = 10.0, 0.0
         self.elapsed = 0.0
@@ -116,6 +131,29 @@ class Player:
 
     def on_enter_LAND(self):
         self.play('land')
+
+    def die(self, direction=None):
+        """현재 위치에서 사망한다. 중복 판정은 기존 연출을 다시 시작하지 않는다."""
+        if self.state != 'DEAD':
+            self.start_death(direction)
+
+    def on_enter_DEAD(self, direction=None):
+        self.death_origin = (self.x, self.y)
+        if direction is None:
+            direction = 1 if self.flip else -1
+        self.death_direction = 1 if direction >= 0 else -1
+        self.death_elapsed = 0.0
+        self.move_direction = self.vy = 0
+        self.dash_left = self.dash_vx = self.dash_vy = self.land_left = 0.0
+        self.can_jump = self.grounded = False
+        self.landing_y = None
+        self.contact = MoveResult(self.body)
+        self.play('dead')
+        self.death_effect = PicoEffect('death', stage=self.appearance)
+
+    @property
+    def death_complete(self):
+        return self.state == 'DEAD' and self.death_elapsed >= DEATH_DURATION
 
     def on_enter_FALL(self):
         self._update_air_animation()
@@ -149,19 +187,21 @@ class Player:
         self.vy = self.land_left = 0.0
 
     def jump(self):
-        if self.can_jump:
+        if self.state != 'DEAD' and self.can_jump:
             self.start_jump()
 
     def dash(self, dx=0, dy=0):
-        if self.dashes > 0:
+        if self.state != 'DEAD' and self.dashes > 0:
             self.start_dash(dx, dy)
 
     def land(self, height):
         """실제 아래쪽 접촉에서 착지와 자원 회복을 반영한다."""
+        if self.state == 'DEAD':
+            return
         if not self.grounded:
-            self.dashes = 2
+            self.dashes = MOVEMENT['dash_charges']
             self.can_jump = True
-            self.land_left = .1
+            self.land_left = MOVEMENT['land_time']
         self.y, self.vy, self.grounded = height, 0.0, True
 
     def play(self, name):
@@ -184,7 +224,8 @@ class Player:
 
     def set_move_direction(self, direction):
         """좌(-1)·정지(0)·우(1) 의도를 저장한다. 행동 전환은 update에서 한다."""
-        self.move_direction = (direction > 0) - (direction < 0)
+        if self.state != 'DEAD':
+            self.move_direction = (direction > 0) - (direction < 0)
 
     @property
     def body(self):
@@ -192,6 +233,9 @@ class Player:
                     self.body_width, self.body_height)
 
     def update(self, dt, solids=(), *, one_way=()):
+        if self.state == 'DEAD':
+            self._update_death(dt)
+            return
         solids, one_way = tuple(solids), tuple(one_way)
         self.contact = MoveResult(self.body)
         self._update_motion(dt, solids, one_way)
@@ -206,6 +250,17 @@ class Player:
                 self.landing_y = future.box.bottom
         self._update_state()
         self.update_visuals(dt)
+
+    def _update_death(self, dt):
+        previous = self.death_elapsed
+        self.death_elapsed += dt
+        body_dt = max(0, self.death_elapsed - FREEZE_TIME) - max(0, previous - FREEZE_TIME)
+        self.update_visuals(body_dt)
+        dx, dy = recoil_offset(self.death_elapsed, self.death_direction)
+        self.x, self.y = self.death_origin[0] + dx, self.death_origin[1] + dy
+        self.death_effect.update(dt)
+        if self.death_effect.done():
+            self.death_effect.close()
 
     def _move(self, dx, dy, solids, one_way, *, straight=False):
         solve = sweep_and_collide if straight else move_and_collide
@@ -275,9 +330,9 @@ class Player:
             self._update_air_animation()
 
     def _update_air_animation(self):
-        if self.jump_age < .067:
+        if self.jump_age < MOVEMENT['jump_start_time']:
             name = 'jump_start'
-        elif abs(self.vy) < 110:
+        elif abs(self.vy) < MOVEMENT['apex_speed']:
             name = 'jump_apex'
         elif self.vy > 0:
             name = 'jump_rise'
@@ -312,6 +367,8 @@ class Player:
 
     def draw(self, offset=(0, 0)):
         """카메라 원점만 빼서 그린다. 월드 위치와 잔상 기록은 유지한다."""
+        if self.death_complete:
+            return
         x, y = self.x - offset[0], self.y - offset[1]
         if self.image is None:
             self.image = p.load_image(str(self.assets / self.data['atlas']))
@@ -347,10 +404,18 @@ class Player:
             *frame['pico2d_clip_rect'], 0, flip,
             cx, cy, width * self.zoom, height * self.zoom,
         )
-        self.sparkles.draw(self.appearance - 1, x, y, self.zoom, self.flip)
+        if self.state == 'DEAD':
+            self.death_effect.draw(self.death_origin[0] - offset[0],
+                                   self.death_origin[1] - offset[1], scale=1,
+                                   flip=self.death_direction < 0, layer='front')
+        else:
+            self.sparkles.draw(self.appearance - 1, x, y, self.zoom, self.flip)
 
     def close(self):
         # SDL 창을 닫기 전에 텍스처 참조를 해제한다.
+        if self.death_effect is not None:
+            self.death_effect.close()
+            self.death_effect = None
         if self.trail is not None:
             self.trail.close()
             self.trail = None

@@ -1,40 +1,43 @@
 """사망 반동과 빛 조각의 시각적 타이밍. 게임의 사망 판정은 담당하지 않는다."""
+import json
 import math
 
+from game.paths import ART_ROOT
 from .painter import TAU, clamp, fit, rand
 
 
-FREEZE_TIME = .05
-BURST_TIME = FREEZE_TIME + .205  # dead 클립이 몸에서 별 조각으로 바뀌는 시점.
-DURATION = .9
-WHITE = ('#34354a', '#66677e', '#999bb2', '#bfc4d8', '#dbe3ee', '#eef5fa', '#f8fcff', '#ffffff')
-GOLD = ('#392039', '#704039', '#b16b37', '#eaa847', '#ffd373', '#ffe7a7', '#fff1ce', '#fff9e9')
-CYAN = ('#173341', '#235361', '#398092', '#61b4c8', '#8ae3f1', '#b9f2fa', '#defaff', '#f3fdff')
+SETTINGS = json.loads((ART_ROOT / 'player' / 'player-settings.json').read_text(encoding='utf-8'))['death']
+FREEZE_TIME = SETTINGS['freeze_time']
+BURST_TIME = FREEZE_TIME + SETTINGS['burst_delay']
+DURATION = SETTINGS['duration']
+WHITE, GOLD, CYAN = (SETTINGS[key] for key in ('white_palette', 'gold_palette', 'cyan_palette'))
 
 
 def recoil_offset(elapsed, direction=1):
     """월드 좌표 기준 반동. 잠깐 정지하고, 몸이 분해되면 방출 위치를 유지한다."""
     age = clamp(elapsed - FREEZE_TIME, 0, BURST_TIME - FREEZE_TIME)
-    return direction * 160 * age, 340 * age - 500 * age * age
+    vx, vy = SETTINGS['recoil_speed']
+    return direction * vx * age, vy * age - SETTINGS['recoil_gravity'] / 2 * age * age
 
 
 def death_burst(p, t, o):
     if t < 0 or t >= DURATION:
         return
-    stage, seed = int(clamp(o.get('stage', 2), 1, 3)), o.get('seed', 113)
+    stage, seed = int(clamp(o.get('stage', 2), 1, 3)), o.get('seed', SETTINGS['seed'])
     gold = fit(WHITE if stage == 1 else o.get('palette', GOLD))
     cyan = fit(o.get('accent_palette', CYAN))
+    height = SETTINGS['center_height']
     if t < FREEZE_TIME:
         flash = 1 - t / FREEZE_TIME
-        p.line(-7 * flash, -28, 7 * flash, -28, gold[7], flash)
-        p.line(0, -28 - 6 * flash, 0, -28 + 6 * flash, gold[7], flash)
-        p.glow(0, -28, 18, gold[5], flash * .35)
+        p.line(-7 * flash, -height, 7 * flash, -height, gold[7], flash)
+        p.line(0, -height - 6 * flash, 0, -height + 6 * flash, gold[7], flash)
+        p.glow(0, -height, 18, gold[5], flash * .35)
 
     age = t - BURST_TIME
     if age < 0:
         return
     cx, up = recoil_offset(BURST_TIME)
-    cy = -up - 28
+    cy = -up - height
     flash = clamp(1 - age / .08)
     if flash:
         p.circle(cx, cy, 2 + flash * 4, gold[7], flash)
@@ -47,18 +50,22 @@ def death_burst(p, t, o):
                        cy + math.sin(start + i * .16) * radius * .8) for i in range(9)]
             p.polyline(points, gold[5], ring * .7)
 
-    for i in range(16):
-        a = age - rand(seed, i, 1) * .025
-        life = .28 + rand(seed, i, 2) * .32
+    particles = SETTINGS['particles']
+    for i in range(particles['count']):
+        a = age - rand(seed, i, 1) * particles['delay_spread']
+        lo, hi = particles['life']
+        life = lo + rand(seed, i, 2) * (hi - lo)
         if not 0 < a < life:
             continue
-        angle = i / 16 * TAU + (rand(seed, i, 3) - .5) * .7
-        speed = 180 + rand(seed, i, 4) * 160
-        travel = (1 - math.exp(-4 * a)) / 4
+        angle = i / particles['count'] * TAU + (rand(seed, i, 3) - .5) * particles['angle_spread']
+        lo, hi = particles['speed']
+        speed = lo + rand(seed, i, 4) * (hi - lo)
+        drag = particles['drag']
+        travel = (1 - math.exp(-drag * a)) / drag if drag else a
         vx, vy = math.cos(angle) * speed, math.sin(angle) * speed * .75 - 35
         sx, sy = (rand(seed, i, 6) - .5) * 24, (rand(seed, i, 7) - .5) * 16
-        x, y = cx + sx + vx * travel, cy + sy + vy * travel + 130 * a * a
-        fade = clamp((life - a) / .15)
+        x, y = cx + sx + vx * travel, cy + sy + vy * travel + particles['gravity'] / 2 * a * a
+        fade = clamp((life - a) / particles['fade_time'])
         colors = cyan if stage == 3 and math.sin(angle) < .2 else gold
         length = (6 + rand(seed, i, 5) * 5) * (1 - a / life)
         dx, dy = math.cos(angle) * length, math.sin(angle) * length

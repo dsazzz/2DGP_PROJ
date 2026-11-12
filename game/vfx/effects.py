@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 from .painter import TAU, clamp, fit, rand
-from .death import DURATION as DEATH_DURATION, death_burst
+from .death import DURATION as DEATH_DURATION, SETTINGS as DEATH_SETTINGS, death_burst
 
 
 ELECTRIC = ('#151020', '#302542', '#55446d', '#81759e', '#b3a9d0', '#ded8ef', '#f2effa', '#ffffff')
@@ -279,7 +279,8 @@ EFFECTS = {
                              {'stage': 2, 'grounded': True, 'strength': .85, 'seed': 91}, 'back'),
     'dashTrail': EffectSpec((288, 160), (208, 112), .38, False, 60, dash_trail,
                             {'stage': 2, 'grounded': True, 'strength': 1, 'seed': 97}, 'back'),
-    'death': EffectSpec((320, 256), (160, 192), DEATH_DURATION, False, 60, death_burst,
-                        {'stage': 2, 'seed': 113}),
+    'death': EffectSpec(tuple(DEATH_SETTINGS['size']), tuple(DEATH_SETTINGS['origin']),
+                        DEATH_DURATION, False, DEATH_SETTINGS['fps'], death_burst,
+                        {'stage': 2, 'seed': DEATH_SETTINGS['seed']}),
 }
 EFFECTS['shatter'] = EFFECTS['lightAbsorb']

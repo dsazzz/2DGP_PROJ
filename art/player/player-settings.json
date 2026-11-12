@@ -1,0 +1,39 @@
+{
+  "movement": {
+    "move_speed": 310,
+    "jump_speed": 690,
+    "gravity": 1800,
+    "dash_speed": 1450,
+    "dash_charges": 2,
+    "fall_prepare_time": 0.08,
+    "land_time": 0.1,
+    "jump_start_time": 0.067,
+    "apex_speed": 110
+  },
+  "body_size": [32, 48],
+  "death": {
+    "freeze_time": 0.05,
+    "burst_delay": 0.205,
+    "duration": 0.9,
+    "recoil_speed": [160, 340],
+    "recoil_gravity": 1000,
+    "size": [320, 256],
+    "origin": [160, 192],
+    "fps": 60,
+    "seed": 113,
+    "center_height": 28,
+    "white_palette": ["#34354a", "#66677e", "#999bb2", "#bfc4d8", "#dbe3ee", "#eef5fa", "#f8fcff", "#ffffff"],
+    "gold_palette": ["#392039", "#704039", "#b16b37", "#eaa847", "#ffd373", "#ffe7a7", "#fff1ce", "#fff9e9"],
+    "cyan_palette": ["#173341", "#235361", "#398092", "#61b4c8", "#8ae3f1", "#b9f2fa", "#defaff", "#f3fdff"],
+    "particles": {
+      "count": 16,
+      "delay_spread": 0.025,
+      "life": [0.28, 0.6],
+      "speed": [180, 340],
+      "angle_spread": 0.7,
+      "drag": 4,
+      "gravity": 260,
+      "fade_time": 0.15
+    }
+  }
+}
