@@ -1,10 +1,11 @@
-"""Python versions of game/vfx/effects/*.js; no JavaScript runtime required."""
+"""Python으로 이식한 효과와 게임 전용 Python 효과의 등록부."""
 from dataclasses import dataclass, field
 import math
 
 import numpy as np
 
 from .painter import TAU, clamp, fit, rand
+from .death import DURATION as DEATH_DURATION, death_burst
 
 
 ELECTRIC = ('#151020', '#302542', '#55446d', '#81759e', '#b3a9d0', '#ded8ef', '#f2effa', '#ffffff')
@@ -252,7 +253,7 @@ class EffectSpec:
     layer: str = 'front'
 
 
-# Names match the approved JS registry. Keyword options use Python snake_case.
+# 기존 효과 이름은 승인된 JS 등록부와 같다. 새 게임 효과도 여기에 등록한다.
 EFFECTS = {
     'electricLattice': EffectSpec((112, 208), (56, 104), 4, True, 30, gate,
                                  {'palette': ELECTRIC, 'seed': 31, 'variant': 0}),
@@ -278,5 +279,7 @@ EFFECTS = {
                              {'stage': 2, 'grounded': True, 'strength': .85, 'seed': 91}, 'back'),
     'dashTrail': EffectSpec((288, 160), (208, 112), .38, False, 60, dash_trail,
                             {'stage': 2, 'grounded': True, 'strength': 1, 'seed': 97}, 'back'),
+    'death': EffectSpec((320, 256), (160, 192), DEATH_DURATION, False, 60, death_burst,
+                        {'stage': 2, 'seed': 113}),
 }
 EFFECTS['shatter'] = EFFECTS['lightAbsorb']
