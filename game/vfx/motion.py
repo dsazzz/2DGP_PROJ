@@ -63,8 +63,9 @@ class MotionEchoes:
                           'anchor': sample.get('anchor', (66, 89)), 'opacity': opacity * (1 - age) ** 2})
         return draws
 
-    def draw(self, samples, now, *, stage=2, lifetime=.14, opacity=.16):
+    def draw(self, samples, now, *, stage=2, lifetime=.14, opacity=.16, offset=(0, 0)):
         from .pico import StreamingTexture
+        left, bottom = offset
         for sample in self.poses(samples, now, stage=stage, lifetime=lifetime, opacity=opacity):
             key, rgba = sample['key'], sample['rgba']
             if key not in self._textures:
@@ -74,7 +75,7 @@ class MotionEchoes:
             texture = self._textures[key]
             w, h = rgba.shape[1], rgba.shape[0]
             anchor = sample['anchor']
-            texture.draw(sample['x'], sample['y'], scale=sample['size'] / w,
+            texture.draw(sample['x'] - left, sample['y'] - bottom, scale=sample['size'] / w,
                          origin=(anchor[0] * w / 128, anchor[1] * h / 128),
                          flip=sample.get('facing', 1) < 0, opacity=sample['opacity'])
 

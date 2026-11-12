@@ -310,7 +310,9 @@ class Player:
                     })
         self.samples[:] = [sample for sample in self.samples if self.elapsed - sample['time'] < .2]
 
-    def draw(self):
+    def draw(self, offset=(0, 0)):
+        """카메라 원점만 빼서 그린다. 월드 위치와 잔상 기록은 유지한다."""
+        x, y = self.x - offset[0], self.y - offset[1]
         if self.image is None:
             self.image = p.load_image(str(self.assets / self.data['atlas']))
         if self.appearance not in self.glow_images:
@@ -322,16 +324,16 @@ class Player:
         if self.trail is not None and self.appearance > 1:
             if self.echoes is None:
                 self.echoes = MotionEchoes(load_rgba(self.assets / self.data['atlas']))
-            self.echoes.draw(self.samples, self.elapsed, stage=self.appearance)
-            self.trail.draw(self.x, self.y, scale=self.zoom * 2, flip=self.flip,
+            self.echoes.draw(self.samples, self.elapsed, stage=self.appearance, offset=offset)
+            self.trail.draw(x, y, scale=self.zoom * 2, flip=self.flip,
                             angle=-self.effect_angle if self.flip else self.effect_angle, layer='back')
 
         frame = self.animation.frame
         width, height = self.data['cell_size']
         anchor_x, anchor_y = self.data['anchor_px']
         offset_x = (width / 2 - anchor_x) * self.zoom
-        cx = self.x - offset_x if self.flip else self.x + offset_x
-        cy = self.y + (anchor_y - height / 2) * self.zoom
+        cx = x - offset_x if self.flip else x + offset_x
+        cy = y + (anchor_y - height / 2) * self.zoom
         flip = 'h' if self.flip else ''
         cell = self.glow['cell_size']
         left, top, _, _ = frame['rect_top_left']
@@ -345,7 +347,7 @@ class Player:
             *frame['pico2d_clip_rect'], 0, flip,
             cx, cy, width * self.zoom, height * self.zoom,
         )
-        self.sparkles.draw(self.appearance - 1, self.x, self.y, self.zoom, self.flip)
+        self.sparkles.draw(self.appearance - 1, x, y, self.zoom, self.flip)
 
     def close(self):
         # SDL 창을 닫기 전에 텍스처 참조를 해제한다.
