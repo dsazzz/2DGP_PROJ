@@ -102,14 +102,21 @@ class Player:
         self.reset()
 
     def reset(self):
+        """시작 위치·행동·자원·효과를 복구한다. 입력과 카메라는 호출 쪽에서 초기화한다."""
         self.reset_state()
 
     def _reset_values(self):
         if self.death_effect is not None:
             self.death_effect.close()
             self.death_effect = None
+        if self.echoes is not None:
+            self.echoes.close()
+            self.echoes = None
         self.death_elapsed = 0.0
         self.x, self.y = self.start_x, self.start_y
+        self.death_origin = (self.x, self.y)
+        self.death_direction = -1
+        self.move_speed = MOVE_SPEED
         self.move_direction = 0
         self.vy = 0.0
         self.facing, self.flip = 1, False
