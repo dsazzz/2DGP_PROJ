@@ -65,6 +65,8 @@ class Player:
         self.death_elapsed = 0.0
         self.death_direction = -1
         self.contact = MoveResult(self.body)
+        # 이번 갱신의 (시작 상자, dx, dy, 시작 초, 이동 초). 흡수 등 외부 트리거가 읽는다.
+        self.movement_paths = []
 
     def die(self, direction=None):
         """현재 위치에서 사망한다. 중복 판정은 기존 연출을 다시 시작하지 않는다."""
@@ -132,6 +134,7 @@ class Player:
 
     def update(self, dt, solids=(), *, one_way=(), hazards=(), death_y=None):
         """위험 구역은 월드 AABB, death_y는 발이 내려가면 사망하는 높이다."""
+        self.movement_paths.clear()
         if self.state == 'DEAD':
             self.death_elapsed += dt
             return
@@ -156,7 +159,8 @@ class Player:
         self.die(-1 if dx > 0 else 1 if dx < 0 else None)
         return True
 
-    def _move(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False):
+    def _move(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False,
+              offset=0.0, duration=0.0):
         solve = sweep_and_collide if straight else move_and_collide
         before = self.body
         result = solve(before, dx, dy, solids, one_way=one_way)
@@ -169,6 +173,12 @@ class Player:
         for box, path_dx, path_dy in paths:
             if self._check_danger(box, path_dx, path_dy, hazards, death_y):
                 return MoveResult(self.body)
+            # 지형에 막히기 전의 실제 경로와 이동 시간을 트리거 판정에 제공한다.
+            if path_dx and dx:
+                ratio = abs(path_dx / dx)
+            else:
+                ratio = abs(path_dy / dy) if path_dy and dy else 0.0
+            self.movement_paths.append((box, path_dx, path_dy, offset, duration * ratio))
         self.x = result.box.left + self.body_width / 2
         self.y = result.box.bottom
         bottom = result.hit_bottom
@@ -199,7 +209,7 @@ class Player:
         dash_dt = min(dt, self.dash_left)
         if dash_dt:
             result = self._move(self.dash_vx * dash_dt, self.dash_vy * dash_dt,
-                                solids, one_way, hazards, death_y, straight=True)
+                                solids, one_way, hazards, death_y, straight=True, duration=dash_dt)
             if self.state == 'DEAD':
                 return
             self.dash_left = max(0.0, self.dash_left - dash_dt)
@@ -211,7 +221,7 @@ class Player:
             dy = self.vy * normal_dt - GRAVITY * normal_dt ** 2 / 2
             self.vy -= GRAVITY * normal_dt
             self._move(self.move_direction * self.move_speed * normal_dt, dy,
-                       solids, one_way, hazards, death_y)
+                       solids, one_way, hazards, death_y, offset=dash_dt, duration=normal_dt)
             if self.state == 'DEAD':
                 return
             if self.move_direction:

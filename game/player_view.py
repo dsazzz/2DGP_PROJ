@@ -86,7 +86,8 @@ class PlayerView:
             return
         if self.sparkles is None:
             self.sparkles = Sparkles()
-        self.sparkles.trigger(self.appearance, self.flip)
+        # 입력 직후에는 표현 갱신 전일 수 있으므로 최신 행동 방향을 읽는다.
+        self.sparkles.trigger(self.appearance, self.player.facing < 0)
 
     def play(self, name):
         self.animation.select(name)
