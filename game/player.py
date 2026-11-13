@@ -6,7 +6,7 @@ import pico2d as p
 from transitions import Machine
 
 from game.paths import ART_ROOT
-from game.collision import AABB, MoveResult, move_and_collide, sweep_and_collide
+from game.collision import AABB, MoveResult, first_contact_time, move_and_collide, sweep_and_collide
 from game.vfx.sparkles import Sparkles
 from game.vfx.motion import MotionEchoes
 from game.vfx.pico import PicoEffect, load_rgba
@@ -232,13 +232,18 @@ class Player:
         return AABB(self.x - self.body_width / 2, self.y,
                     self.body_width, self.body_height)
 
-    def update(self, dt, solids=(), *, one_way=()):
+    def update(self, dt, solids=(), *, one_way=(), hazards=(), death_y=None):
+        """위험 구역은 월드 AABB, death_y는 발이 내려가면 사망하는 높이다."""
         if self.state == 'DEAD':
             self._update_death(dt)
             return
-        solids, one_way = tuple(solids), tuple(one_way)
+        solids, one_way, hazards = tuple(solids), tuple(one_way), tuple(hazards)
+        if self._check_danger(self.body, 0, 0, hazards, death_y):
+            return
         self.contact = MoveResult(self.body)
-        self._update_motion(dt, solids, one_way)
+        self._update_motion(dt, solids, one_way, hazards, death_y)
+        if self.state == 'DEAD':
+            return
         self.landing_y = None
         if self.vy <= 0:
             t = FALL_PREPARE_TIME
@@ -262,9 +267,32 @@ class Player:
         if self.death_effect.done():
             self.death_effect.close()
 
-    def _move(self, dx, dy, solids, one_way, *, straight=False):
+    def _check_danger(self, box, dx, dy, hazards, death_y):
+        time = first_contact_time(box, dx, dy, hazards)
+        if death_y is not None and box.bottom + dy < death_y:
+            fall_time = 0.0 if box.bottom < death_y else (death_y - box.bottom) / dy
+            time = fall_time if time is None else min(time, fall_time)
+        if time is None:
+            return False
+        self.x = box.left + box.width / 2 + dx * time
+        self.y = box.bottom + dy * time
+        # 가로 진입 방향과 반대로 튕긴다. 세로 진입이면 현재 바라보는 방향을 쓴다.
+        self.die(-1 if dx > 0 else 1 if dx < 0 else None)
+        return True
+
+    def _move(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False):
         solve = sweep_and_collide if straight else move_and_collide
-        result = solve(self.body, dx, dy, solids, one_way=one_way)
+        before = self.body
+        result = solve(before, dx, dy, solids, one_way=one_way)
+        actual_dx, actual_dy = result.box.left - before.left, result.box.bottom - before.bottom
+        if straight:
+            paths = ((before, actual_dx, actual_dy),)
+        else:
+            after_x = AABB(result.box.left, before.bottom, before.width, before.height)
+            paths = ((before, actual_dx, 0), (after_x, 0, actual_dy))
+        for box, path_dx, path_dy in paths:
+            if self._check_danger(box, path_dx, path_dy, hazards, death_y):
+                return MoveResult(self.body)
         self.x = result.box.left + self.body_width / 2
         self.y = result.box.bottom
         bottom = result.hit_bottom
@@ -288,14 +316,16 @@ class Player:
         )
         return result
 
-    def _update_motion(self, dt, solids, one_way):
+    def _update_motion(self, dt, solids, one_way, hazards, death_y):
         self.jump_age += dt
         self.land_left = max(0.0, self.land_left - dt)
         # 대시 종료 시점을 나누어 프레임 주기에 따라 이동 거리가 달라지지 않게 한다.
         dash_dt = min(dt, self.dash_left)
         if dash_dt:
             result = self._move(self.dash_vx * dash_dt, self.dash_vy * dash_dt,
-                                solids, one_way, straight=True)
+                                solids, one_way, hazards, death_y, straight=True)
+            if self.state == 'DEAD':
+                return
             self.dash_left = max(0.0, self.dash_left - dash_dt)
             if (result.hit_left or result.hit_right or result.hit_top
                     or result.hit_bottom and self.dash_vy < 0):
@@ -305,11 +335,13 @@ class Player:
             dy = self.vy * normal_dt - GRAVITY * normal_dt ** 2 / 2
             self.vy -= GRAVITY * normal_dt
             self._move(self.move_direction * self.move_speed * normal_dt, dy,
-                       solids, one_way)
+                       solids, one_way, hazards, death_y)
+            if self.state == 'DEAD':
+                return
             if self.move_direction:
                 self.facing = self.move_direction
         elif not dash_dt:
-            self._move(0, 0, solids, one_way)
+            self._move(0, 0, solids, one_way, hazards, death_y)
 
     def _update_state(self):
         if self.state == 'DASH' and self.dash_left > 0:

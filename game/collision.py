@@ -1,7 +1,7 @@
 """정적 사각형 지형의 축별 이동과 직선 이동 구간 충돌을 해결한다."""
 from dataclasses import dataclass
 import math
-from typing import Iterable
+from typing import Iterable, Optional
 
 
 @dataclass(frozen=True)
@@ -104,6 +104,27 @@ def _axis_times(low, high, delta, other_low, other_high):
     if high <= other_low or low >= other_high:
         return math.inf, -math.inf
     return -math.inf, math.inf
+
+
+def first_contact_time(box: AABB, dx: float, dy: float,
+                       areas: Iterable[AABB]) -> Optional[float]:
+    """이동 구간에서 영역에 처음 진입하는 비율(0~1). 없으면 None.
+
+    시작부터 겹치면 0이며, 한 점을 스치거나 접한 면에서 멀어지면 무시한다.
+    지형을 막거나 게임 상태를 바꾸지 않는 트리거용 기하 검사다.
+    """
+    if not math.isfinite(dx) or not math.isfinite(dy):
+        raise ValueError('Movement must be finite')
+    first = None
+    for area in areas:
+        if box.overlaps(area):
+            return 0.0
+        enter_x, exit_x = _axis_times(box.left, box.right, dx, area.left, area.right)
+        enter_y, exit_y = _axis_times(box.bottom, box.top, dy, area.bottom, area.top)
+        enter, leave = max(enter_x, enter_y), min(exit_x, exit_y)
+        if 0 <= enter <= 1 and enter < leave:
+            first = enter if first is None else min(first, enter)
+    return first
 
 
 def sweep_and_collide(box: AABB, dx: float, dy: float,
