@@ -6,6 +6,7 @@ import numpy as np
 
 from .painter import TAU, clamp, fit, rand
 from .death import DURATION as DEATH_DURATION, SETTINGS as DEATH_SETTINGS, death_burst
+from .sparkles import DURATION as BOOST_DURATION, absorb_boost
 
 
 ELECTRIC = ('#151020', '#302542', '#55446d', '#81759e', '#b3a9d0', '#ded8ef', '#f2effa', '#ffffff')
@@ -282,5 +283,8 @@ EFFECTS = {
     'death': EffectSpec(tuple(DEATH_SETTINGS['size']), tuple(DEATH_SETTINGS['origin']),
                         DEATH_DURATION, False, DEATH_SETTINGS['fps'], death_burst,
                         {'stage': 2, 'seed': DEATH_SETTINGS['seed']}),
+    'absorbBoost': EffectSpec((256, 160), (128, 128), BOOST_DURATION, False, 60, absorb_boost,
+                              {'stage': 2, 'seed': 149, 'palette': SPEED_GOLD,
+                               'accent_palette': SPEED_CYAN}),
 }
 EFFECTS['shatter'] = EFFECTS['lightAbsorb']
