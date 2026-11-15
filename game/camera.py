@@ -21,8 +21,8 @@ class Camera:
 
     @property
     def offset(self):
-        # 모든 레이어가 같은 정수 원점을 사용한다.
-        return round(self.x), round(self.y)
+        # 모든 레이어가 같은 소수점 원점을 사용한다.
+        return self.x, self.y
 
     @property
     def view(self):

@@ -4,6 +4,7 @@ import json
 import pico2d as p
 
 from game.paths import ART_ROOT
+from game.rendering import draw_clip
 from game.vfx.pico import PicoEffect
 
 
@@ -71,7 +72,7 @@ class JumpPadView:
         anchor_x, anchor_y = frame['anchor_px']
         x = self.pad.area.left + self.pad.area.width / 2 - offset[0]
         y = self.pad.area.bottom - offset[1]
-        self.image.clip_composite_draw(
+        draw_clip(self.image,
             left, self.image.h - top - height, width, height, 0, '',
             x + (width / 2 - anchor_x) * self.zoom,
             y + (anchor_y - height / 2) * self.zoom,
@@ -102,7 +103,7 @@ class MovingPlatformView:
         x, y = area.left - offset[0], area.top - offset[1]
         for frame in self.frames:
             left, top, width, height = frame['rect']
-            self.image.clip_composite_draw(
+            draw_clip(self.image,
                 left, self.image.h - top - height, width, height, 0, '',
                 x + width * zoom / 2, y + (frame['surface_y_px'] - height / 2) * zoom,
                 width * zoom, height * zoom,

@@ -5,6 +5,7 @@ import math
 import pico2d as p
 
 from game.paths import ART_ROOT
+from game.rendering import draw_clip
 from game.collision import move_and_collide
 from game.player import MOVEMENT
 from game.vfx.death import FREEZE_TIME, recoil_offset
@@ -244,10 +245,10 @@ class PlayerView:
         left, top, _, _ = frame['rect_top_left']
         glow_left = left // width * cell
         glow_bottom = (self.data['atlas_size'][1] // height - 1 - top // height) * cell
-        self.glow_images[self.appearance].clip_composite_draw(
+        draw_clip(self.glow_images[self.appearance],
             glow_left, glow_bottom, cell, cell, 0, flip, cx, cy, cell * self.zoom, cell * self.zoom,
         )
-        self.image.clip_composite_draw(
+        draw_clip(self.image,
             *frame['pico2d_clip_rect'], 0, flip, cx, cy, width * self.zoom, height * self.zoom,
         )
         if self.player.state == 'DEAD':
