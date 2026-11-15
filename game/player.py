@@ -89,7 +89,7 @@ class Player:
         return self.state == 'DEAD' and self.death_elapsed >= DEATH_DURATION
 
     def on_enter_JUMP(self):
-        self.vy = JUMP_SPEED
+        self.vy = self.jump_speed
         self.grounded = self.can_jump = False
         self.dash_left = self.land_left = 0.0
         self.jump_age = 0.0
@@ -119,11 +119,27 @@ class Player:
         if self.state != 'DEAD':
             self.dashes = min(self.dashes + 1, MOVEMENT['dash_charges'])
 
+    @property
+    def speed_multiplier(self):
+        return MOVE_SPEEDS[self.speed_level - 1] / MOVE_SPEEDS[0]
+
+    @property
+    def jump_speed(self):
+        return JUMP_SPEED * self.speed_multiplier
+
+    @property
+    def gravity(self):
+        # 상승·낙하 시간은 줄이되 점프 높이 v²/(2g)는 유지한다.
+        return GRAVITY * self.speed_multiplier ** 2
+
     def set_speed_level(self, level):
-        """기본 이동의 단계를 설정한다. 현재 행동·대시·점프는 유지한다."""
+        """이동과 공중 동작의 단계를 바꾼다. 위치·행동·대시는 유지한다."""
         if self.state != 'DEAD':
+            before = self.speed_multiplier
             self.speed_level = max(1, min(level, len(MOVE_SPEEDS)))
             self.move_speed = MOVE_SPEEDS[self.speed_level - 1]
+            if not self.grounded:
+                self.vy *= self.speed_multiplier / before
 
     def increase_speed_level(self):
         """한 단계 올린다. 단계 수와 속도는 설정표를 따른다."""
@@ -235,8 +251,9 @@ class Player:
                 self.dash_left = self.dash_vx = self.dash_vy = 0.0
         normal_dt = dt - dash_dt
         if normal_dt:
-            dy = self.vy * normal_dt - GRAVITY * normal_dt ** 2 / 2
-            self.vy -= GRAVITY * normal_dt
+            gravity = self.gravity
+            dy = self.vy * normal_dt - gravity * normal_dt ** 2 / 2
+            self.vy -= gravity * normal_dt
             self._move(self.move_direction * self.move_speed * normal_dt, dy,
                        solids, one_way, hazards, death_y, offset=dash_dt, duration=normal_dt)
             if self.state == 'DEAD':

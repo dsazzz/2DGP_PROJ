@@ -6,7 +6,7 @@ import pico2d as p
 
 from game.paths import ART_ROOT
 from game.collision import move_and_collide
-from game.player import GRAVITY, MOVEMENT
+from game.player import MOVEMENT
 from game.vfx.death import FREEZE_TIME, recoil_offset
 from game.vfx.motion import MotionEchoes
 from game.vfx.pico import PicoEffect, load_rgba
@@ -54,11 +54,17 @@ class PlayerView:
         self.data = json.loads((self.assets / 'player.json').read_text(encoding='utf-8-sig'))
         self.glow = json.loads((self.assets / 'player-glow.json').read_text(encoding='utf-8'))
         self.animation = Animation(self.data)
-        self.appearance = self.glow['active_preset'] + 1
+        self._appearance_override = None
         self.image, self.glow_images = None, {}
         self.trail = self.echoes = self.sparkles = self.death_effect = None
         self.samples = []
         self.reset()
+
+    @property
+    def appearance(self):
+        if self._appearance_override is not None:
+            return self._appearance_override
+        return min(3, self.player.speed_level)
 
     @property
     def position(self):
@@ -76,10 +82,23 @@ class PlayerView:
         self.death_origin = (self.player.x, self.player.y)
         self._reset_revision = self.player.reset_revision
         self._state_revision = self.player.state_revision
+        self._last_appearance = self.appearance
         self.play('idle')
 
-    def set_appearance(self, stage):
-        self.appearance = stage
+    def set_appearance(self, stage=None):
+        """단독 미리보기의 외형 선택. None이면 플레이어의 속도 단계를 따른다."""
+        self._appearance_override = stage
+
+    def _sync_appearance(self):
+        appearance = self.appearance
+        if appearance != self._last_appearance:
+            self.samples.clear()
+            if self.echoes is not None:
+                self.echoes.close()
+                self.echoes = None
+            self._last_appearance = appearance
+        if self.trail is not None:
+            self.trail.options['stage'] = appearance
 
     def play_absorb_effect(self):
         if self.player.state == 'DEAD':
@@ -106,14 +125,14 @@ class PlayerView:
 
     def _air_clip(self):
         player = self.player
-        if player.jump_age < MOVEMENT['jump_start_time']:
+        if player.jump_age < MOVEMENT['jump_start_time'] / player.speed_multiplier:
             return 'jump_start'
-        if abs(player.vy) < MOVEMENT['apex_speed']:
+        if abs(player.vy) < MOVEMENT['apex_speed'] * player.speed_multiplier:
             return 'jump_apex'
         if player.vy > 0:
             return 'jump_rise'
         t = FALL_PREPARE_TIME
-        next_y = player.y + player.vy * t - GRAVITY * t * t / 2
+        next_y = player.y + player.vy * t - player.gravity * t * t / 2
         return 'fall' if self.landing_y is not None and next_y <= self.landing_y else 'fall_air'
 
     def _sync(self):
@@ -155,7 +174,7 @@ class PlayerView:
         if player.state != 'DEAD' and player.vy <= 0:
             t = FALL_PREPARE_TIME
             future = move_and_collide(player.body, player.move_direction * player.move_speed * t,
-                                      player.vy * t - GRAVITY * t * t / 2,
+                                      player.vy * t - player.gravity * t * t / 2,
                                       solids, one_way=one_way)
             if future.hit_bottom:
                 self.landing_y = future.box.bottom
@@ -172,6 +191,7 @@ class PlayerView:
             self.update_visuals(dt)
 
     def update_visuals(self, dt):
+        self._sync_appearance()
         self.elapsed += dt
         self.clip_elapsed += dt
         self.animation.update(dt)
@@ -194,6 +214,7 @@ class PlayerView:
         self.samples[:] = [sample for sample in self.samples if self.elapsed - sample['time'] < .2]
 
     def draw(self, offset=(0, 0)):
+        self._sync_appearance()
         if (self._state_revision != self.player.state_revision
                 or self._reset_revision != self.player.reset_revision):
             self._sync()
