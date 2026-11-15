@@ -1,4 +1,4 @@
-"""흡수원의 첫 접촉 시각과 새 대시 입력을 비교한다. 표현·보상은 호출 쪽 책임이다."""
+"""흡수 시도와 접촉의 시간을 비교한다. 입력 해석·이동·표현·보상은 호출 쪽 책임이다."""
 import math
 
 from game.collision import first_contact_time
@@ -15,19 +15,22 @@ class AbsorbSource:
 
     def reset(self):
         self.time = 0.0
-        self.contact_time = self._dash_time = None
+        self.contact_time = self._attempt_time = None
         self.consumed = self._touching = False
 
-    def cancel_input(self):
-        """포커스를 잃었을 때 보류 중인 입력을 버린다."""
-        self._dash_time = None
+    def cancel_attempt(self):
+        """포커스 이탈·사망 때 보류 중인 시도를 버린다."""
+        self._attempt_time = None
 
-    def press_dash(self):
-        """실행 가능한 새 대시 입력만 전달한다. 키 유지·DASH 상태는 입력이 아니다."""
+    def try_absorb(self):
+        """시도를 기록하고 지금 소비되었으면 True를 반환한다.
+
+        재입력 여부는 입력부가 구분한다. False는 아직 소비되지 않았다는 뜻이다.
+        """
         if self.consumed:
             return False
-        self._dash_time = self.time
-        return self._consume()
+        self._attempt_time = self.time
+        return self._try_consume()
 
     def update(self, dt, body, movement_paths=()):
         """경로는 (시작 AABB, dx, dy, 갱신 내 시작 초, 이동 초)이다."""
@@ -37,28 +40,29 @@ class AbsorbSource:
         self.time += dt
         if self.consumed:
             return False
-        hit = False
+        contacted = False
         if not self._touching:
             for box, dx, dy, offset, duration in movement_paths:
-                at = first_contact_time(box, dx, dy, (self.area,))
-                if at is not None:
-                    self.contact_time = start + offset + duration * at
-                    hit = True
+                contact_fraction = first_contact_time(box, dx, dy, (self.area,))
+                if contact_fraction is not None:
+                    self.contact_time = start + offset + duration * contact_fraction
+                    contacted = True
                     break
-            if not hit and body.overlaps(self.area):
+            if not contacted and body.overlaps(self.area):
                 self.contact_time = self.time
-                hit = True
+                contacted = True
         # 접촉면에 정확히 멈춰도 다음 갱신에서 접촉 시각을 다시 잡지 않는다.
         closed_overlap = (body.left <= self.area.right and body.right >= self.area.left
                           and body.bottom <= self.area.top and body.top >= self.area.bottom)
-        self._touching = body.overlaps(self.area) or ((hit or self._touching) and closed_overlap)
-        return self._consume()
+        self._touching = body.overlaps(self.area) or ((contacted or self._touching) and closed_overlap)
+        return self._try_consume()
 
-    def _consume(self):
-        if self._dash_time is None or self.contact_time is None:
+    def _try_consume(self):
+        if self._attempt_time is None or self.contact_time is None:
             return False
-        difference = abs(self._dash_time - self.contact_time)
-        if difference > self.window and not math.isclose(difference, self.window, rel_tol=0, abs_tol=1e-9):
+        difference = abs(self._attempt_time - self.contact_time)
+        on_boundary = math.isclose(difference, self.window, rel_tol=0, abs_tol=1e-9)
+        if difference > self.window and not on_boundary:
             return False
         self.consumed = True
         return True
