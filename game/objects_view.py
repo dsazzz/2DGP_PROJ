@@ -61,6 +61,35 @@ class AbsorbSourceView:
             self.effect = None
 
 
+class SpikesView:
+    """가시 끝의 이미지 영역과 모델의 위험 영역을 같은 위치에 맞춘다."""
+
+    def __init__(self, spikes):
+        self.spikes = spikes
+        self.assets = ART_ROOT / 'environment'
+        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        self.frame = next(item for item in data['assets'] if item['id'] == 'spikes_up')
+        self.image_path = self.assets / data['atlases'][self.frame['atlas']]['image']
+        self.image = None
+
+    def draw(self, offset=(0, 0)):
+        if self.image is None:
+            self.image = p.load_image(str(self.image_path))
+        left, top, width, height = self.frame['rect']
+        danger_x, danger_y, danger_w, danger_h = self.frame['hazard_rect_px']
+        area = self.spikes.area
+        scale_x, scale_y = area.width / danger_w, area.height / danger_h
+        draw_clip(self.image,
+            left, self.image.h - top - height, width, height, 0, '',
+            area.left - offset[0] + (width / 2 - danger_x) * scale_x,
+            area.top - offset[1] + (danger_y - height / 2) * scale_y,
+            width * scale_x, height * scale_y,
+        )
+
+    def close(self):
+        self.image = None
+
+
 class JumpPlatformView:
     """발판 상태를 읽어 기본·눌림 아틀라스 이미지를 표시한다."""
 

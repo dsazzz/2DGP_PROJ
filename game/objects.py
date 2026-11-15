@@ -68,6 +68,13 @@ class AbsorbSource:
         return True
 
 
+class Spikes:
+    """고정 가시의 위험 영역. 사망 처리는 플레이어의 기존 경로 판정을 사용한다."""
+
+    def __init__(self, area: AABB):
+        self.area = area
+
+
 class JumpPlatform:
     def __init__(self, area, launch_height=128, press_duration=.12):
         self.area = area

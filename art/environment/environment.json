@@ -885,8 +885,9 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false,
-      "group": "objects_active"
+      "behavior_implemented": true,
+      "group": "objects_active",
+      "hazard_rect_px": [8, 8, 128, 28]
     },
     {
       "id": "spikes_retracted",
