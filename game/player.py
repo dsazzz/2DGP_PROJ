@@ -96,7 +96,7 @@ class Player:
         self.dash_left = self.land_left = 0.0
         self.jump_age = 0.0
 
-    def on_enter_DASH(self, dx, dy):
+    def on_enter_DASH(self, dx, dy, consume_charge=True):
         if dx == dy == 0:
             dx = self.facing
         if dx:
@@ -104,7 +104,8 @@ class Player:
         self.dash_left = DASH_DURATION
         length = math.hypot(dx, dy)
         self.dash_vx, self.dash_vy = dx / length * DASH_SPEED, dy / length * DASH_SPEED
-        self.dashes -= 1
+        if consume_charge:
+            self.dashes = max(0, self.dashes - 1)
         self.can_jump = True
         self.vy = self.land_left = 0.0
 
@@ -118,13 +119,13 @@ class Player:
             self.start_jump(math.sqrt(2 * self.gravity * height))
 
     def dash(self, dx=0, dy=0):
-        if self.state != 'DEAD' and self.dashes > 0:
+        if self.state != 'DEAD' and (self.grounded or self.dashes > 0):
             self.start_dash(dx, dy)
 
-    def recover_dash(self):
-        """대시를 1회 회복한다. 행동과 이동은 유지하고 최대 횟수를 넘지 않는다."""
-        if self.state != 'DEAD':
-            self.dashes = min(self.dashes + 1, MOVEMENT['dash_charges'])
+    def redirect_dash(self, dx=0, dy=0):
+        """진행 중인 대시를 새 방향으로 다시 시작한다. 보유 횟수는 바꾸지 않는다."""
+        if self.state == 'DASH' and self.dash_left > 0:
+            self.start_dash(dx, dy, consume_charge=False)
 
     @property
     def speed_multiplier(self):
@@ -157,9 +158,9 @@ class Player:
         if self.state == 'DEAD':
             return
         if not self.grounded:
-            self.dashes = MOVEMENT['dash_charges']
             self.can_jump = True
             self.land_left = MOVEMENT['land_time']
+        self.dashes = MOVEMENT['dash_charges']
         self.y, self.vy, self.grounded = height, 0.0, True
 
     def set_move_direction(self, direction):
@@ -194,7 +195,7 @@ class Player:
                 if self.state == 'DEAD':
                     return
                 if rider.supports(self.body):
-                    # 탑승 유지로 매 프레임 착지 보상을 다시 지급하지 않는다.
+                    # 접지를 유지하는 동안 대시는 쓸 수 있지만 착지 연출은 반복하지 않는다.
                     self.grounded = True
                     self.land(rider.area.top)
                 one_way += (rider.area,)
