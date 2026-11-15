@@ -1,7 +1,7 @@
 """맵에 배치하는 오브젝트의 상태와 동작. 표현 모듈에 의존하지 않는다."""
 import math
 
-from game.collision import first_contact_time
+from game.collision import AABB, first_contact_time
 
 
 class AbsorbSource:
@@ -95,3 +95,35 @@ class JumpPad:
             player.bounce(self.launch_height)
             self.pressed_left = self.press_duration
         return activated
+
+
+class MovingPlatform:
+    """상자의 왼쪽 아래 좌표를 두 지점 사이에서 일정 속도로 왕복시킨다."""
+
+    def __init__(self, area, end, speed=64):
+        if not all(math.isfinite(value) for value in (*end, speed)) or speed < 0:
+            raise ValueError('Platform needs finite endpoints and a nonnegative speed')
+        self.start_area = area
+        self.end = tuple(end)
+        self.speed = speed
+        self._dx, self._dy = self.end[0] - area.left, self.end[1] - area.bottom
+        self._length = math.hypot(self._dx, self._dy)
+        self.reset()
+
+    def reset(self):
+        self.area = self.start_area
+        self.delta = (0.0, 0.0)
+        self._travel = 0.0
+
+    def update(self, dt):
+        if not math.isfinite(dt) or dt < 0:
+            raise ValueError('dt must be finite and nonnegative')
+        previous = self.area
+        if self._length:
+            # 끝점을 넘긴 거리도 되돌아오는 구간에 반영한다.
+            self._travel = (self._travel + self.speed * dt) % (2 * self._length)
+            progress = min(self._travel, 2 * self._length - self._travel) / self._length
+            start = self.start_area
+            self.area = AABB(start.left + self._dx * progress,
+                             start.bottom + self._dy * progress, start.width, start.height)
+        self.delta = (self.area.left - previous.left, self.area.bottom - previous.bottom)

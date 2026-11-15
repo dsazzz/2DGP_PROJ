@@ -80,3 +80,34 @@ class JumpPadView:
 
     def close(self):
         self.image = None
+
+
+class MovingPlatformView:
+    """기존 발판의 왼쪽·중앙·오른쪽 모듈을 이동 상자 윗면에 맞춰 표시한다."""
+
+    def __init__(self, platform):
+        self.platform = platform
+        self.assets = ART_ROOT / 'environment'
+        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        frames = {item['id']: item for item in data['assets']}
+        self.frames = tuple(frames[name] for name in ('solid-left', 'solid-middle', 'solid-right'))
+        self.image_path = self.assets / data['atlases'][self.frames[0]['atlas']]['image']
+        self.image = None
+
+    def draw(self, offset=(0, 0)):
+        if self.image is None:
+            self.image = p.load_image(str(self.image_path))
+        area = self.platform.area
+        zoom = area.width / sum(frame['rect'][2] for frame in self.frames)
+        x, y = area.left - offset[0], area.top - offset[1]
+        for frame in self.frames:
+            left, top, width, height = frame['rect']
+            self.image.clip_composite_draw(
+                left, self.image.h - top - height, width, height, 0, '',
+                x + width * zoom / 2, y + (frame['surface_y_px'] - height / 2) * zoom,
+                width * zoom, height * zoom,
+            )
+            x += width * zoom
+
+    def close(self):
+        self.image = None
