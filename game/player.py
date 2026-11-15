@@ -112,6 +112,11 @@ class Player:
         if self.state != 'DEAD' and self.dashes > 0:
             self.start_dash(dx, dy)
 
+    def recover_dash(self):
+        """대시를 1회 회복한다. 행동과 이동은 유지하고 최대 횟수를 넘지 않는다."""
+        if self.state != 'DEAD':
+            self.dashes = min(self.dashes + 1, MOVEMENT['dash_charges'])
+
     def land(self, height):
         """실제 아래쪽 접촉에서 착지와 자원 회복을 반영한다."""
         if self.state == 'DEAD':
