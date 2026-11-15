@@ -1,4 +1,4 @@
-"""흡수 시도와 접촉의 시간을 비교한다. 입력 해석·이동·표현·보상은 호출 쪽 책임이다."""
+"""맵에 배치하는 오브젝트의 상태와 동작. 표현 모듈에 의존하지 않는다."""
 import math
 
 from game.collision import first_contact_time
@@ -66,3 +66,32 @@ class AbsorbSource:
             return False
         self.consumed = True
         return True
+
+
+class JumpPad:
+    def __init__(self, area, launch_height=128, press_duration=.12):
+        self.area = area
+        self.launch_height = launch_height
+        self.press_duration = press_duration
+        self.reset()
+
+    def reset(self):
+        self.pressed_left = 0.0
+        self._touching = False
+
+    @property
+    def pressed(self):
+        return self.pressed_left > 0
+
+    def update(self, dt, player):
+        self.pressed_left = max(0.0, self.pressed_left - dt)
+        body = player.body
+        on_top = (body.left < self.area.right and body.right > self.area.left
+                  and math.isclose(body.bottom, self.area.top, rel_tol=0, abs_tol=1e-7))
+        activated = (on_top and not self._touching and player.state != 'DEAD'
+                     and player.grounded and player.contact.hit_bottom)
+        self._touching = on_top
+        if activated:
+            player.bounce(self.launch_height)
+            self.pressed_left = self.press_duration
+        return activated

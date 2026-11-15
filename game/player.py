@@ -88,8 +88,8 @@ class Player:
     def death_complete(self):
         return self.state == 'DEAD' and self.death_elapsed >= DEATH_DURATION
 
-    def on_enter_JUMP(self):
-        self.vy = self.jump_speed
+    def on_enter_JUMP(self, speed=None):
+        self.vy = self.jump_speed if speed is None else speed
         self.grounded = self.can_jump = False
         self.dash_left = self.land_left = 0.0
         self.jump_age = 0.0
@@ -109,6 +109,11 @@ class Player:
     def jump(self):
         if self.state != 'DEAD' and self.can_jump:
             self.start_jump()
+
+    def bounce(self, height):
+        """발판 등 외부 동작으로 위로 튕긴다. 현재 단계의 중력을 따른다."""
+        if self.state != 'DEAD':
+            self.start_jump(math.sqrt(2 * self.gravity * height))
 
     def dash(self, dx=0, dy=0):
         if self.state != 'DEAD' and self.dashes > 0:
