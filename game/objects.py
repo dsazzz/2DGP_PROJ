@@ -98,32 +98,58 @@ class JumpPad:
 
 
 class MovingPlatform:
-    """상자의 왼쪽 아래 좌표를 두 지점 사이에서 일정 속도로 왕복시킨다."""
+    """높이를 유지하면서 시작 x와 끝 x 사이를 일정 속도로 왕복한다."""
 
-    def __init__(self, area, end, speed=64):
-        if not all(math.isfinite(value) for value in (*end, speed)) or speed < 0:
+    def __init__(self, area, end_x, speed=64):
+        if not all(math.isfinite(value) for value in (end_x, speed)) or speed < 0:
             raise ValueError('Platform needs finite endpoints and a nonnegative speed')
         self.start_area = area
-        self.end = tuple(end)
+        self.end_x = end_x
         self.speed = speed
-        self._dx, self._dy = self.end[0] - area.left, self.end[1] - area.bottom
-        self._length = math.hypot(self._dx, self._dy)
+        self._dx = end_x - area.left
+        self._length = abs(self._dx)
         self.reset()
 
     def reset(self):
         self.area = self.start_area
+        self.previous_area = self.area
         self.delta = (0.0, 0.0)
         self._travel = 0.0
 
     def update(self, dt):
         if not math.isfinite(dt) or dt < 0:
             raise ValueError('dt must be finite and nonnegative')
-        previous = self.area
+        self.previous_area = previous = self.area
         if self._length:
             # 끝점을 넘긴 거리도 되돌아오는 구간에 반영한다.
             self._travel = (self._travel + self.speed * dt) % (2 * self._length)
             progress = min(self._travel, 2 * self._length - self._travel) / self._length
             start = self.start_area
             self.area = AABB(start.left + self._dx * progress,
-                             start.bottom + self._dy * progress, start.width, start.height)
-        self.delta = (self.area.left - previous.left, self.area.bottom - previous.bottom)
+                             start.bottom, start.width, start.height)
+        self.delta = (self.area.left - previous.left, 0.0)
+
+    def area_at(self, fraction):
+        """이번 갱신 구간의 상자. 플레이어의 분할된 대시 이동에서도 사용한다."""
+        area = self.previous_area
+        return AABB(area.left + self.delta[0] * fraction,
+                    area.bottom, area.width, area.height)
+
+    def supports(self, body, *, previous=False):
+        area = self.previous_area if previous else self.area
+        return (body.left < area.right and body.right > area.left
+                and math.isclose(body.bottom, area.top, rel_tol=0, abs_tol=1e-7))
+
+    def landing_time(self, body, dx, dy, start=0, end=1):
+        """플레이어 발과 움직이는 윗면이 만나는 비율. 아래·옆 진입은 통과한다."""
+        area = self.area_at(start)
+        if body.bottom < area.top - 1e-7 or dy >= 0:
+            return None
+        time = max(0.0, (area.top - body.bottom) / dy)
+        if time > 1:
+            return None
+        x = body.left + dx * time
+        platform_x = area.left + self.delta[0] * (end - start) * time
+        if x < platform_x + area.width and x + body.width > platform_x:
+            return time
+        return None

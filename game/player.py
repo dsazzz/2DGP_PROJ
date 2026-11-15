@@ -69,6 +69,8 @@ class Player:
         self.contact = MoveResult(self.body)
         # 이번 갱신의 (시작 상자, dx, dy, 시작 초, 이동 초). 흡수 등 외부 트리거가 읽는다.
         self.movement_paths = []
+        self._moving_platforms = ()
+        self._motion_dt = 0.0
 
     def die(self, direction=None):
         """현재 위치에서 사망한다. 중복 판정은 기존 연출을 다시 시작하지 않는다."""
@@ -170,7 +172,8 @@ class Player:
         return AABB(self.x - self.body_width / 2, self.y,
                     self.body_width, self.body_height)
 
-    def update(self, dt, solids=(), *, one_way=(), hazards=(), death_y=None):
+    def update(self, dt, solids=(), *, one_way=(), hazards=(), death_y=None,
+               moving_platforms=()):
         """위험 구역은 월드 AABB, death_y는 발이 내려가면 사망하는 높이다."""
         self.movement_paths.clear()
         if self.state == 'DEAD':
@@ -180,6 +183,21 @@ class Player:
         if self._check_danger(self.body, 0, 0, hazards, death_y):
             return
         self.contact = MoveResult(self.body)
+        self._moving_platforms = tuple(moving_platforms)
+        self._motion_dt = dt
+        if self.grounded and not (self.dash_left and self.dash_vy > 0):
+            rider = next((platform for platform in self._moving_platforms
+                          if platform.supports(self.body, previous=True)), None)
+            if rider is not None:
+                self._moving_platforms = tuple(p for p in self._moving_platforms if p is not rider)
+                self._move_static(rider.delta[0], 0, solids, one_way, hazards, death_y, duration=dt)
+                if self.state == 'DEAD':
+                    return
+                if rider.supports(self.body):
+                    # 탑승 유지로 매 프레임 착지 보상을 다시 지급하지 않는다.
+                    self.grounded = True
+                    self.land(rider.area.top)
+                one_way += (rider.area,)
         self._update_motion(dt, solids, one_way, hazards, death_y)
         if self.state != 'DEAD':
             self._update_state()
@@ -199,6 +217,54 @@ class Player:
 
     def _move(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False,
               offset=0.0, duration=0.0):
+        if not self._moving_platforms or self._motion_dt == 0 or dy >= 0:
+            return self._move_static(dx, dy, solids, one_way, hazards, death_y,
+                                     straight=straight, offset=offset, duration=duration)
+        solve = sweep_and_collide if straight else move_and_collide
+        before = self.body
+        static = solve(before, dx, dy, solids, one_way=one_way)
+        start, end = offset / self._motion_dt, (offset + duration) / self._motion_dt
+        # 일반 이동은 기존 X→Y 순서를 유지하고, 대시는 직선 접촉 시각을 사용한다.
+        vertical_box = before if straight else AABB(
+            static.box.left, before.bottom, before.width, before.height)
+        limit = abs((static.box.bottom - before.bottom) / dy) if dy else 1.0
+        if straight and dx:
+            limit = min(limit, abs((static.box.left - before.left) / dx))
+        contacts = []
+        for platform in self._moving_platforms:
+            time = platform.landing_time(vertical_box, dx if straight else 0, dy, start, end)
+            if time is not None and time <= limit + 1e-9:
+                contacts.append((time, platform))
+        if not contacts:
+            return self._move_static(dx, dy, solids, one_way, hazards, death_y,
+                                     straight=straight, offset=offset, duration=duration)
+        time, platform = min(contacts, key=lambda contact: contact[0])
+        surface = platform.area_at(start + (end - start) * time)
+        self._move_static(dx * time if straight else dx, surface.top - before.bottom,
+                          solids, one_way, hazards, death_y, straight=straight,
+                          offset=offset, duration=duration * time)
+        if self.state == 'DEAD':
+            return MoveResult(self.body)
+        if not math.isclose(self.y, surface.top, rel_tol=0, abs_tol=1e-7):
+            return self.contact
+        self.land(surface.top)
+        destination = platform.area_at(end)
+        self._move_static(destination.left - surface.left, 0,
+                          solids, one_way, hazards, death_y,
+                          offset=offset + duration * time, duration=duration * (1 - time))
+        if self.state == 'DEAD':
+            return MoveResult(self.body)
+        if (self.body.left < destination.right and self.body.right > destination.left
+                and math.isclose(self.y, destination.top, rel_tol=0, abs_tol=1e-7)):
+            self.grounded = True
+            self.land(destination.top)
+        contact = self.contact
+        self.contact = MoveResult(self.body, contact.hit_left, contact.hit_right,
+                                  self.grounded, contact.hit_top)
+        return MoveResult(self.body, contact.hit_left, contact.hit_right, True, contact.hit_top)
+
+    def _move_static(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False,
+                     offset=0.0, duration=0.0):
         solve = sweep_and_collide if straight else move_and_collide
         before = self.body
         result = solve(before, dx, dy, solids, one_way=one_way)
