@@ -10,8 +10,9 @@ from game.collision import AABB, MoveResult, first_contact_time, move_and_collid
 
 SETTINGS = json.loads((ART_ROOT / 'player' / 'player-settings.json').read_text(encoding='utf-8'))
 MOVEMENT = SETTINGS['movement']
-MOVE_SPEED, JUMP_SPEED, GRAVITY, DASH_SPEED = (
-    MOVEMENT[key] for key in ('move_speed', 'jump_speed', 'gravity', 'dash_speed')
+MOVE_SPEEDS = tuple(MOVEMENT['move_speeds'])
+JUMP_SPEED, GRAVITY, DASH_SPEED = (
+    MOVEMENT[key] for key in ('jump_speed', 'gravity', 'dash_speed')
 )
 DASH_DURATION = MOVEMENT['dash_duration']
 DEATH_DURATION = SETTINGS['death']['duration']
@@ -55,7 +56,8 @@ class Player:
     def _reset_values(self):
         self.reset_revision += 1
         self.x, self.y = self.start_x, self.start_y
-        self.move_speed = MOVE_SPEED
+        self.speed_level = 1
+        self.move_speed = MOVE_SPEEDS[0]
         self.move_direction = self.vy = 0
         self.facing = 1
         self.grounded = self.can_jump = True
@@ -116,6 +118,16 @@ class Player:
         """대시를 1회 회복한다. 행동과 이동은 유지하고 최대 횟수를 넘지 않는다."""
         if self.state != 'DEAD':
             self.dashes = min(self.dashes + 1, MOVEMENT['dash_charges'])
+
+    def set_speed_level(self, level):
+        """기본 이동의 단계를 설정한다. 현재 행동·대시·점프는 유지한다."""
+        if self.state != 'DEAD':
+            self.speed_level = max(1, min(level, len(MOVE_SPEEDS)))
+            self.move_speed = MOVE_SPEEDS[self.speed_level - 1]
+
+    def increase_speed_level(self):
+        """한 단계 올린다. 단계 수와 속도는 설정표를 따른다."""
+        self.set_speed_level(self.speed_level + 1)
 
     def land(self, height):
         """실제 아래쪽 접촉에서 착지와 자원 회복을 반영한다."""
