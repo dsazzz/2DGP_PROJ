@@ -8,6 +8,19 @@ from game.rendering import draw_clip
 from game.vfx.pico import PicoEffect
 
 
+def _draw_platform(image, frames, area, offset):
+    zoom = area.width / sum(frame['rect'][2] for frame in frames)
+    x, y = area.left - offset[0], area.top - offset[1]
+    for frame in frames:
+        left, top, width, height = frame['rect']
+        draw_clip(image,
+            left, image.h - top - height, width, height, 0, '',
+            x + width * zoom / 2, y + (frame['surface_y_px'] - height / 2) * zoom,
+            width * zoom, height * zoom,
+        )
+        x += width * zoom
+
+
 class AbsorbSourceView:
     """효과의 생성·갱신·출력·정리만 소유한다. 판정과 보상은 변경하지 않는다."""
 
@@ -109,6 +122,37 @@ class MovingPlatformView:
                 width * zoom, height * zoom,
             )
             x += width * zoom
+
+    def close(self):
+        self.image = None
+
+
+class DisappearingPlatformView:
+    """기본·경고 이미지를 선택하며 소멸 중에는 그리지 않는다."""
+
+    def __init__(self, platform):
+        self.platform = platform
+        self.assets = ART_ROOT / 'environment'
+        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        frames = {item['id']: item for item in data['assets']}
+        self.frame_sets = {
+            state: tuple(frames[prefix + '-' + part] for part in ('left', 'middle', 'right'))
+            for state, prefix in (('READY', 'disappear_normal'), ('WARNING', 'disappear_warning'))
+        }
+        first = self.frame_sets['READY'][0]
+        self.image_path = self.assets / data['atlases'][first['atlas']]['image']
+        self.image = None
+
+    @property
+    def frames(self):
+        return self.frame_sets.get(self.platform.state, ())
+
+    def draw(self, offset=(0, 0)):
+        if not self.frames:
+            return
+        if self.image is None:
+            self.image = p.load_image(str(self.image_path))
+        _draw_platform(self.image, self.frames, self.platform.area, offset)
 
     def close(self):
         self.image = None

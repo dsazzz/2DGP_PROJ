@@ -153,3 +153,48 @@ class MovingPlatform:
         if x < platform_x + area.width and x + body.width > platform_x:
             return time
         return None
+
+
+class DisappearingPlatform:
+    """윗면을 밟으면 경고 후 사라지고, 빈 위치에 다시 나타나는 발판."""
+
+    def __init__(self, area, warning_time=.5, hidden_time=2.0):
+        if any(not math.isfinite(value) or value <= 0 for value in (warning_time, hidden_time)):
+            raise ValueError('Platform times must be finite and positive')
+        self.area = area
+        self.warning_time, self.hidden_time = warning_time, hidden_time
+        self.reset()
+
+    def reset(self):
+        self.state = 'READY'
+        self.time_left = 0.0
+
+    @property
+    def collidable(self):
+        return self.state != 'HIDDEN'
+
+    def update(self, dt, body):
+        """물리 갱신 전에 시간과 충돌 활성 여부를 갱신한다."""
+        if not math.isfinite(dt) or dt < 0:
+            raise ValueError('dt must be finite and nonnegative')
+        if self.state == 'READY':
+            return
+        self.time_left -= dt
+        if self.state == 'WARNING' and self.time_left <= 1e-9:
+            self.state = 'HIDDEN'
+            self.time_left += self.hidden_time
+        if self.state == 'HIDDEN' and self.time_left <= 1e-9:
+            self.time_left = 0.0
+            if not body.overlaps(self.area):
+                self.reset()
+
+    def trigger(self, player):
+        """물리 갱신 뒤 유효한 윗면 접촉으로만 경고를 시작한다."""
+        body = player.body
+        if (self.state != 'READY' or player.state == 'DEAD' or not player.grounded
+                or not player.contact.hit_bottom or body.left >= self.area.right
+                or body.right <= self.area.left
+                or not math.isclose(body.bottom, self.area.top, rel_tol=0, abs_tol=1e-7)):
+            return False
+        self.state, self.time_left = 'WARNING', self.warning_time
+        return True
