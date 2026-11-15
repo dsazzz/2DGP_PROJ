@@ -61,21 +61,22 @@ class AbsorbSourceView:
             self.effect = None
 
 
-class JumpPadView:
+class JumpPlatformView:
     """발판 상태를 읽어 기본·눌림 아틀라스 이미지를 표시한다."""
 
-    def __init__(self, pad, zoom=.5):
-        self.pad, self.zoom = pad, zoom
+    def __init__(self, platform, zoom=.5):
+        self.platform = platform
         self.assets = ART_ROOT / 'environment'
         data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
         self.frames = {item['id']: item for item in data['assets']
                        if item['id'] in ('spring_rest', 'spring_pressed')}
         self.atlases = data['atlases']
+        self.zoom = zoom / self.atlases[self.frame['atlas']].get('pixel_scale', 1)
         self.image = None
 
     @property
     def frame(self):
-        return self.frames['spring_pressed' if self.pad.pressed else 'spring_rest']
+        return self.frames['spring_pressed' if self.platform.pressed else 'spring_rest']
 
     def draw(self, offset=(0, 0)):
         frame = self.frame
@@ -83,8 +84,8 @@ class JumpPadView:
             self.image = p.load_image(str(self.assets / self.atlases[frame['atlas']]['image']))
         left, top, width, height = frame['rect']
         anchor_x, anchor_y = frame['anchor_px']
-        x = self.pad.area.left + self.pad.area.width / 2 - offset[0]
-        y = self.pad.area.bottom - offset[1]
+        x = self.platform.area.left + self.platform.area.width / 2 - offset[0]
+        y = self.platform.area.bottom - offset[1]
         draw_clip(self.image,
             left, self.image.h - top - height, width, height, 0, '',
             x + (width / 2 - anchor_x) * self.zoom,
@@ -96,32 +97,50 @@ class JumpPadView:
         self.image = None
 
 
-class MovingPlatformView:
-    """기존 발판의 왼쪽·중앙·오른쪽 모듈을 이동 상자 윗면에 맞춰 표시한다."""
+class PlatformView:
+    """일반 철판과 한 종류의 얇은 통과 발판을 표시한다."""
 
-    def __init__(self, platform):
-        self.platform = platform
+    def __init__(self, area, *, one_way=False):
+        self.area = area
         self.assets = ART_ROOT / 'environment'
         data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
         frames = {item['id']: item for item in data['assets']}
-        self.frames = tuple(frames[name] for name in ('solid-left', 'solid-middle', 'solid-right'))
+        prefix = 'pass_through' if one_way else 'solid'
+        self.frames = tuple(frames[prefix + '-' + part] for part in ('left', 'middle', 'right'))
         self.image_path = self.assets / data['atlases'][self.frames[0]['atlas']]['image']
         self.image = None
 
     def draw(self, offset=(0, 0)):
         if self.image is None:
             self.image = p.load_image(str(self.image_path))
-        area = self.platform.area
-        zoom = area.width / sum(frame['rect'][2] for frame in self.frames)
-        x, y = area.left - offset[0], area.top - offset[1]
-        for frame in self.frames:
-            left, top, width, height = frame['rect']
-            draw_clip(self.image,
-                left, self.image.h - top - height, width, height, 0, '',
-                x + width * zoom / 2, y + (frame['surface_y_px'] - height / 2) * zoom,
-                width * zoom, height * zoom,
-            )
-            x += width * zoom
+        _draw_platform(self.image, self.frames, self.area, offset)
+
+    def close(self):
+        self.image = None
+
+
+class MovingPlatformView:
+    """롤러와 방향 화살표가 있는 컨베이어 원본을 수평 이동 발판으로 사용한다."""
+
+    def __init__(self, platform):
+        self.platform = platform
+        self.assets = ART_ROOT / 'environment'
+        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        frames = {item['id']: item for item in data['assets']}
+        self.directions = {direction: frames['moving_platform_' + direction]
+                           for direction in ('left', 'right')}
+        self.image_path = self.assets / data['atlases'][self.directions['right']['atlas']]['image']
+        self.image = None
+
+    @property
+    def frames(self):
+        dx = self.platform.delta[0] or self.platform.end_x - self.platform.start_area.left
+        return (self.directions['left' if dx < 0 else 'right'],)
+
+    def draw(self, offset=(0, 0)):
+        if self.image is None:
+            self.image = p.load_image(str(self.image_path))
+        _draw_platform(self.image, self.frames, self.platform.area, offset)
 
     def close(self):
         self.image = None
@@ -152,7 +171,13 @@ class DisappearingPlatformView:
             return
         if self.image is None:
             self.image = p.load_image(str(self.image_path))
-        _draw_platform(self.image, self.frames, self.platform.area, offset)
+        warning = self.platform.state == 'WARNING'
+        age = self.platform.warning_time - self.platform.time_left
+        self.image.opacify(.35 if warning and int(age * 10) % 2 else 1)
+        try:
+            _draw_platform(self.image, self.frames, self.platform.area, offset)
+        finally:
+            self.image.opacify(1)
 
     def close(self):
         self.image = None

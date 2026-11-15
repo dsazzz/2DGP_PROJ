@@ -68,7 +68,7 @@ class AbsorbSource:
         return True
 
 
-class JumpPad:
+class JumpPlatform:
     def __init__(self, area, launch_height=128, press_duration=.12):
         self.area = area
         self.launch_height = launch_height

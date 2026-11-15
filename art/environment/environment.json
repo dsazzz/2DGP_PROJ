@@ -16,53 +16,50 @@
       "image": "terrain.png"
     },
     "platforms": {
+      "image": "platforms.png",
+      "size": [
+        1152,
+        768
+      ],
       "cell_size": [
         128,
-        64
+        128
       ],
-      "sha256": "e1d92c5500a059c3659cdc7c6c21914e6cd06cc691a4a3e4ea6dfb68a1e6f1ea",
-      "size": [
-        384,
-        256
-      ],
-      "image": "platforms.png"
+      "layout": "authored rows; use asset rect and anchor_px",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "sha256": "d98a1bb19802a6699f8a32197a40c22ab22c25d28e947f7caca1cb9e1ef108d7",
+      "pixel_scale": 2
     },
-    "props": {
+    "objects_active": {
+      "image": "objects-active.png",
+      "size": [
+        832,
+        592
+      ],
+      "cell_size": [
+        208,
+        16
+      ],
+      "layout": "authored rows; use asset rect and anchor_px",
+      "art_source": "existing",
+      "route": "generate2dmap:extract_prop_pack",
+      "sha256": "017c604735b3d43fe4e345ef05a102705718dca91a96d37663a35dbd16cf798a"
+    },
+    "structures": {
+      "image": "objects-structures.png",
+      "size": [
+        960,
+        1056
+      ],
       "cell_size": [
         64,
-        64
+        16
       ],
-      "sha256": "02822dd77160ea7fa7dd41163ad5b1fea1b25e195e6e96c2332549aa964068d8",
-      "size": [
-        2048,
-        1024
-      ],
-      "image": "props.png",
-      "layout": "mixed rectangles; 64px placement grid; use each asset rect"
-    },
-    "obstacles": {
-      "image": "obstacles.png",
-      "size": [
-        1024,
-        1024
-      ],
-      "cell_size": [
-        256,
-        256
-      ],
-      "sha256": "d29efe5eb8c31fd437a96915f0b48452c7a6dd2b0566e9b08766365986c48980"
-    },
-    "platforms_thin": {
-      "image": "platforms-thin.png",
-      "size": [
-        384,
-        192
-      ],
-      "cell_size": [
-        128,
-        64
-      ],
-      "sha256": "3d1554fb783959370c4fee58ee2bcdb20bf327e8751af50eb4ae0691ef4f6c76"
+      "layout": "authored rows; use asset rect and anchor_px",
+      "art_source": "existing",
+      "route": "generate2dmap:extract_prop_pack",
+      "sha256": "e94c0113f7e4d661d884ac2ac36f7b7f2cf440217a235d88a5768ff26752a55a"
     }
   },
   "assets": [
@@ -79,7 +76,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "floor_top",
@@ -94,7 +92,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "outer_tr",
@@ -109,7 +108,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "fill_a",
@@ -124,7 +124,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "wall_left",
@@ -139,7 +140,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "fill_base",
@@ -154,7 +156,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "wall_right",
@@ -169,7 +172,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "fill_b",
@@ -184,7 +188,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "outer_bl",
@@ -199,7 +204,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "ceiling_bottom",
@@ -214,7 +220,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "outer_br",
@@ -229,7 +236,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "fill_c",
@@ -244,7 +252,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "inner_tl",
@@ -259,7 +268,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "inner_tr",
@@ -274,7 +284,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "inner_bl",
@@ -289,7 +300,8 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "inner_br",
@@ -304,286 +316,460 @@
       "anchor_px": [
         0,
         0
-      ]
+      ],
+      "group": "terrain"
     },
     {
       "id": "solid-left",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        0,
-        0,
-        128,
-        64
+        192,
+        32,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "solid-middle",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        128,
-        0,
-        128,
-        64
+        448,
+        32,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "solid-right",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
+        704,
+        32,
         256,
-        0,
-        128,
-        64
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_normal-left",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        0,
-        128,
-        128,
-        64
+        192,
+        288,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_normal-middle",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        128,
-        128,
-        128,
-        64
+        448,
+        288,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_normal-right",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
+        704,
+        288,
         256,
-        128,
-        128,
-        64
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_warning-left",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        0,
         192,
-        128,
-        64
+        416,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_warning-middle",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
-        128,
-        192,
-        128,
-        64
+        448,
+        416,
+        256,
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "disappear_warning-right",
       "kind": "platform_module",
       "atlas": "platforms",
       "rect": [
+        704,
+        416,
         256,
-        192,
-        128,
-        64
+        128
       ],
       "anchor_px": [
         0,
-        16
+        32
       ],
-      "surface_y_px": 16
+      "surface_y_px": 32,
+      "group": "platforms",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "moving_platform_left",
+      "kind": "moving_platform",
+      "atlas": "platforms",
+      "rect": [
+        16,
+        652,
+        256,
+        84
+      ],
+      "anchor_px": [
+        0,
+        0
+      ],
+      "visible_size": [
+        256,
+        84
+      ],
+      "source_cell_crop": [
+        32,
+        126,
+        299,
+        214
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": true,
+      "reuse_from": "conveyor_left",
+      "surface_y_px": 0,
+      "visual_thickness_px": 84,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "moving_platform_right",
+      "kind": "moving_platform",
+      "atlas": "platforms",
+      "rect": [
+        304,
+        652,
+        256,
+        84
+      ],
+      "anchor_px": [
+        0,
+        0
+      ],
+      "visible_size": [
+        256,
+        84
+      ],
+      "source_cell_crop": [
+        32,
+        126,
+        299,
+        214
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": true,
+      "reuse_from": "conveyor_right",
+      "surface_y_px": 0,
+      "visual_thickness_px": 84,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "spring_rest",
+      "kind": "obstacle_prop",
+      "atlas": "platforms",
+      "rect": [
+        608,
+        574,
+        222,
+        162
+      ],
+      "anchor_px": [
+        112,
+        146
+      ],
+      "visible_size": [
+        192,
+        130
+      ],
+      "source_cell_crop": [
+        50,
+        96,
+        264,
+        241
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": true,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "spring_pressed",
+      "kind": "obstacle_prop",
+      "atlas": "platforms",
+      "rect": [
+        896,
+        618,
+        224,
+        118
+      ],
+      "anchor_px": [
+        112,
+        102
+      ],
+      "visible_size": [
+        192,
+        130
+      ],
+      "source_cell_crop": [
+        50,
+        96,
+        264,
+        241
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": true,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "pass_through-left",
+      "kind": "platform_module",
+      "atlas": "platforms",
+      "rect": [
+        192,
+        160,
+        256,
+        128
+      ],
+      "anchor_px": [
+        0,
+        32
+      ],
+      "surface_y_px": 32,
+      "visual_thickness_px": 14,
+      "contact_span_px": [
+        3,
+        128
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": false,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "pass_through-middle",
+      "kind": "platform_module",
+      "atlas": "platforms",
+      "rect": [
+        448,
+        160,
+        256,
+        128
+      ],
+      "anchor_px": [
+        0,
+        32
+      ],
+      "surface_y_px": 32,
+      "visual_thickness_px": 14,
+      "contact_span_px": [
+        0,
+        128
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": false,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
+    },
+    {
+      "id": "pass_through-right",
+      "kind": "platform_module",
+      "atlas": "platforms",
+      "rect": [
+        704,
+        160,
+        256,
+        128
+      ],
+      "anchor_px": [
+        0,
+        32
+      ],
+      "surface_y_px": 32,
+      "visual_thickness_px": 14,
+      "contact_span_px": [
+        0,
+        126
+      ],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "behavior_implemented": false,
+      "group": "platforms",
+      "quality_revision": "2x detail restoration; original silhouette retained"
     },
     {
       "id": "exit_closed",
       "kind": "prop",
-      "atlas": "props",
+      "atlas": "objects_active",
       "rect": [
-        0,
-        0,
-        256,
-        256
+        14,
+        16,
+        179,
+        208
       ],
       "anchor_px": [
-        128,
-        240
-      ]
+        89,
+        200
+      ],
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "exit_open",
       "kind": "prop",
-      "atlas": "props",
+      "atlas": "objects_active",
       "rect": [
-        256,
-        0,
-        256,
-        256
+        222,
+        16,
+        179,
+        208
       ],
       "anchor_px": [
-        128,
-        240
-      ]
+        89,
+        200
+      ],
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "laser_emitter",
       "kind": "prop",
-      "atlas": "props",
+      "atlas": "objects_active",
       "rect": [
-        512,
-        0,
-        256,
-        256
+        690,
+        504,
+        76,
+        72
       ],
       "anchor_px": [
-        158,
-        212
-      ]
-    },
-    {
-      "id": "observation_window",
-      "kind": "prop",
-      "atlas": "props",
-      "rect": [
-        0,
-        256,
-        256,
-        256
+        68,
+        36
       ],
-      "anchor_px": [
-        128,
-        240
-      ]
-    },
-    {
-      "id": "specimen_capsule",
-      "kind": "prop",
-      "atlas": "props",
-      "rect": [
-        256,
-        256,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        240
-      ]
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "terminal",
       "kind": "prop",
-      "atlas": "props",
+      "atlas": "objects_active",
       "rect": [
-        512,
-        256,
-        256,
-        256
+        488,
+        488,
+        63,
+        88
       ],
       "anchor_px": [
-        128,
-        240
-      ]
-    },
-    {
-      "id": "pipes",
-      "kind": "prop",
-      "atlas": "props",
-      "rect": [
-        0,
-        512,
-        256,
-        256
+        31,
+        80
       ],
-      "anchor_px": [
-        128,
-        240
-      ]
-    },
-    {
-      "id": "cables",
-      "kind": "prop",
-      "atlas": "props",
-      "rect": [
-        256,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        112
-      ]
-    },
-    {
-      "id": "light",
-      "kind": "prop",
-      "atlas": "props",
-      "rect": [
-        512,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        216
-      ]
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "split-ring",
@@ -592,10 +778,10 @@
         257,
         480
       ],
-      "atlas": "props",
+      "atlas": "structures",
       "rect": [
-        768,
-        0,
+        30,
+        22,
         515,
         490
       ],
@@ -603,7 +789,9 @@
         515,
         490
       ],
-      "source_sha256": "4757bbe1bda2aaea861b0d9b98974e70189d66fe499ca0adb9afffdf0536e4b0"
+      "source_sha256": "4757bbe1bda2aaea861b0d9b98974e70189d66fe499ca0adb9afffdf0536e4b0",
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "containment-cradle",
@@ -612,10 +800,10 @@
         161,
         474
       ],
-      "atlas": "props",
+      "atlas": "structures",
       "rect": [
-        1408,
-        0,
+        608,
+        29,
         320,
         483
       ],
@@ -623,7 +811,9 @@
         320,
         483
       ],
-      "source_sha256": "a604fc43015fef5d3132a0bb20b11dfa168db34805cb804f1d58767c23887ad3"
+      "source_sha256": "a604fc43015fef5d3132a0bb20b11dfa168db34805cb804f1d58767c23887ad3",
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "wall-emitter",
@@ -632,10 +822,10 @@
         185,
         326
       ],
-      "atlas": "props",
+      "atlas": "structures",
       "rect": [
-        768,
-        512,
+        103,
+        706,
         369,
         334
       ],
@@ -643,7 +833,9 @@
         369,
         334
       ],
-      "source_sha256": "4b29145db6044a41d64c56de5480178b463cd11af7c30a33a90a89bf6f0bef42"
+      "source_sha256": "4b29145db6044a41d64c56de5480178b463cd11af7c30a33a90a89bf6f0bef42",
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "field-pylon",
@@ -652,10 +844,10 @@
         111,
         479
       ],
-      "atlas": "props",
+      "atlas": "structures",
       "rect": [
-        1408,
-        512,
+        657,
+        553,
         221,
         487
       ],
@@ -663,51 +855,23 @@
         221,
         487
       ],
-      "source_sha256": "63547e1e2672db22ff5b24347f112bc89943a4f1e72938a33c036ee8699bcbb0"
-    },
-    {
-      "id": "lab-wall",
-      "kind": "background",
-      "image": "backgrounds/lab-wall.png",
-      "size": [
-        768,
-        512
-      ],
-      "sha256": "4d63721880cd648b3d2eee8bcf6907afa7cd2266835fa165ad619ce51bc1f64f"
-    },
-    {
-      "id": "resonance",
-      "kind": "background",
-      "image": "backgrounds/resonance.png",
-      "size": [
-        1280,
-        720
-      ],
-      "sha256": "8cdfaebf3aa470d554b808c3a4644a28e82a0df1815e55c4b6baa65e6c290bef"
-    },
-    {
-      "id": "containment",
-      "kind": "background",
-      "image": "backgrounds/containment.png",
-      "size": [
-        1280,
-        720
-      ],
-      "sha256": "b0b476e5c604e3c209746551187b406b8a661222ee3efbb6c31b97510154115e"
+      "source_sha256": "63547e1e2672db22ff5b24347f112bc89943a4f1e72938a33c036ee8699bcbb0",
+      "group": "objects_active",
+      "behavior_implemented": false
     },
     {
       "id": "spikes_up",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        0,
-        0,
-        256,
-        256
+        32,
+        250,
+        144,
+        67
       ],
       "anchor_px": [
-        128,
-        240
+        72,
+        59
       ],
       "visible_size": [
         128,
@@ -721,21 +885,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "spikes_retracted",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        256,
-        0,
-        256,
-        256
+        240,
+        274,
+        143,
+        43
       ],
       "anchor_px": [
-        128,
-        240
+        72,
+        35
       ],
       "visible_size": [
         128,
@@ -749,21 +914,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "saw_blade",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        512,
-        0,
-        256,
-        256
+        480,
+        240,
+        80,
+        77
       ],
       "anchor_px": [
-        128,
-        209
+        40,
+        38
       ],
       "visible_size": [
         64,
@@ -777,21 +943,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "saw_motor",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        768,
-        0,
-        256,
-        256
+        688,
+        243,
+        80,
+        74
       ],
       "anchor_px": [
-        128,
-        240
+        40,
+        66
       ],
       "visible_size": [
         64,
@@ -805,21 +972,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "crusher_head",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        0,
-        256,
-        256,
-        256
+        32,
+        362,
+        144,
+        110
       ],
       "anchor_px": [
-        128,
-        240
+        72,
+        102
       ],
       "visible_size": [
         128,
@@ -833,21 +1001,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "crusher_piston",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        256,
-        256,
-        256,
-        256
+        272,
+        333,
+        80,
+        139
       ],
       "anchor_px": [
-        128,
-        117
+        40,
+        8
       ],
       "visible_size": [
         64,
@@ -861,21 +1030,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "shutter_closed",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        512,
-        256,
-        256,
-        256
+        422,
+        16,
+        196,
+        208
       ],
       "anchor_px": [
-        128,
-        240
+        98,
+        200
       ],
       "visible_size": [
         181,
@@ -889,21 +1059,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "shutter_open",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        768,
-        256,
-        256,
-        256
+        630,
+        16,
+        196,
+        208
       ],
       "anchor_px": [
-        128,
-        240
+        97,
+        200
       ],
       "visible_size": [
         181,
@@ -917,133 +1088,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "conveyor_left",
-      "kind": "obstacle_prop",
-      "atlas": "obstacles",
-      "rect": [
-        0,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        240
-      ],
-      "visible_size": [
-        128,
-        42
-      ],
-      "source_cell_crop": [
-        32,
-        126,
-        299,
-        214
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "conveyor_right",
-      "kind": "obstacle_prop",
-      "atlas": "obstacles",
-      "rect": [
-        256,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        240
-      ],
-      "visible_size": [
-        128,
-        42
-      ],
-      "source_cell_crop": [
-        32,
-        126,
-        299,
-        214
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "spring_rest",
-      "kind": "obstacle_prop",
-      "atlas": "obstacles",
-      "rect": [
-        512,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        240
-      ],
-      "visible_size": [
-        96,
-        65
-      ],
-      "source_cell_crop": [
-        50,
-        96,
-        264,
-        241
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": true
-    },
-    {
-      "id": "spring_pressed",
-      "kind": "obstacle_prop",
-      "atlas": "obstacles",
-      "rect": [
-        768,
-        512,
-        256,
-        256
-      ],
-      "anchor_px": [
-        128,
-        240
-      ],
-      "visible_size": [
-        96,
-        65
-      ],
-      "source_cell_crop": [
-        50,
-        96,
-        264,
-        241
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": true
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "repulsor_bumper",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        0,
-        768,
-        256,
-        256
+        481,
+        392,
+        78,
+        80
       ],
       "anchor_px": [
-        128,
-        208
+        39,
+        40
       ],
       "visible_size": [
         62,
@@ -1057,21 +1117,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "pressure_vent",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        256,
-        768,
-        256,
-        256
+        688,
+        394,
+        80,
+        78
       ],
       "anchor_px": [
-        128,
-        240
+        40,
+        70
       ],
       "visible_size": [
         64,
@@ -1085,21 +1146,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "fragile_panel",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        512,
-        768,
-        256,
-        256
+        64,
+        496,
+        80,
+        80
       ],
       "anchor_px": [
-        128,
-        240
+        40,
+        72
       ],
       "visible_size": [
         64,
@@ -1113,21 +1175,22 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
       "id": "scanner_sensor",
       "kind": "obstacle_prop",
-      "atlas": "obstacles",
+      "atlas": "objects_active",
       "rect": [
-        768,
-        768,
-        256,
-        256
+        280,
+        515,
+        64,
+        61
       ],
       "anchor_px": [
-        128,
-        195
+        32,
+        8
       ],
       "visible_size": [
         48,
@@ -1141,295 +1204,41 @@
       ],
       "art_source": "host_image",
       "route": "host:image_gen",
-      "behavior_implemented": false
+      "behavior_implemented": false,
+      "group": "objects_active"
     },
     {
-      "id": "pass_through-left",
-      "kind": "platform_module",
-      "atlas": "platforms",
-      "rect": [
-        0,
-        64,
-        128,
-        64
+      "id": "lab-wall",
+      "kind": "background",
+      "image": "backgrounds/lab-wall.png",
+      "size": [
+        768,
+        512
       ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        3,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
+      "sha256": "4d63721880cd648b3d2eee8bcf6907afa7cd2266835fa165ad619ce51bc1f64f",
+      "group": "background"
     },
     {
-      "id": "pass_through-middle",
-      "kind": "platform_module",
-      "atlas": "platforms",
-      "rect": [
-        128,
-        64,
-        128,
-        64
+      "id": "resonance",
+      "kind": "background",
+      "image": "backgrounds/resonance.png",
+      "size": [
+        1280,
+        720
       ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        0,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
+      "sha256": "8cdfaebf3aa470d554b808c3a4644a28e82a0df1815e55c4b6baa65e6c290bef",
+      "group": "background"
     },
     {
-      "id": "pass_through-right",
-      "kind": "platform_module",
-      "atlas": "platforms",
-      "rect": [
-        256,
-        64,
-        128,
-        64
+      "id": "containment",
+      "kind": "background",
+      "image": "backgrounds/containment.png",
+      "size": [
+        1280,
+        720
       ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        0,
-        126
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "moving-left",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        0,
-        0,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        3,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "moving-middle",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        128,
-        0,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        0,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "moving-right",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        256,
-        0,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        0,
-        125
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "conveyor-left",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        0,
-        64,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        3,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "conveyor-middle",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        128,
-        64,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        0,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "conveyor-right",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        256,
-        64,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 9,
-      "contact_span_px": [
-        0,
-        125
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "fragile-left",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        0,
-        128,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        3,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "fragile-middle",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        128,
-        128,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        0,
-        128
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
-    },
-    {
-      "id": "fragile-right",
-      "kind": "platform_module",
-      "atlas": "platforms_thin",
-      "rect": [
-        256,
-        128,
-        128,
-        64
-      ],
-      "anchor_px": [
-        0,
-        16
-      ],
-      "surface_y_px": 16,
-      "visual_thickness_px": 7,
-      "contact_span_px": [
-        0,
-        126
-      ],
-      "art_source": "host_image",
-      "route": "host:image_gen",
-      "behavior_implemented": false
+      "sha256": "b0b476e5c604e3c209746551187b406b8a661222ee3efbb6c31b97510154115e",
+      "group": "background"
     }
   ],
   "platform_surface_y_px": 16,
@@ -1549,5 +1358,11 @@
     "tile_px": 64,
     "player_cell_display_px": 128,
     "player_idle_visible_height_px": 67
+  },
+  "groups": {
+    "terrain": "지형 타일",
+    "platforms": "일반·통과·사라짐·이동·점프 발판",
+    "objects_active": "기능 개체; 대형 구조물도 포함. 구현 여부는 behavior_implemented 참조",
+    "background": "개별 배경 이미지"
   }
 }
