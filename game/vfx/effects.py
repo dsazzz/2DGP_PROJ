@@ -139,37 +139,12 @@ def small_source(p, t, o):
 
 
 def absorb(p, t, o):
-    if t < 0 or t >= .9:
+    """흡수원 자리에서 수축·소멸한다. 외부 목표로 입자를 보내지 않는다."""
+    if t < 0 or t >= .3:
         return
-    colors, seed = fit(o.get('palette', RED)), o['seed']
-    tx, ty = clamp(o.get('target_x', -56) / 64, -1, 1) * 64, clamp(o.get('target_y', 10) / 40, -1, 1) * 40
-    cy = bob_at(o.get('idle_phase', 0))
-    if t < .30:
-        q = t / .30
-        light(p, o.get('idle_phase', 0), {**o, 'size': o.get('size', 1) * (1 - .92 * q * q),
-                                        'opacity': 1 - q * q, 'glow': 1})
-    for i in range(24):
-        delay, lifetime = .035 + rand(seed, i, 1) * .12, .36 + rand(seed, i, 2) * .22
-        u = clamp((t - delay) / lifetime)
-        if t <= delay or u >= 1:
-            continue
-        angle, radius = rand(seed, i, 3) * TAU, 4 + rand(seed, i, 4) * 13
-        sx, sy = math.cos(angle) * radius, cy + math.sin(angle) * radius * .7
-
-        def point(v):
-            arc = math.sin(math.pi * v) * (-1 if i % 2 else 1) * (5 + rand(seed, i, 5) * 9)
-            return sx + (tx - sx) * v * v, sy + (ty - sy) * v * v + arc
-
-        x, y = point(u)
-        lx, ly = point(max(0, u - .13))
-        alpha = math.sin(math.pi * u) ** .6
-        p.line(lx, ly, x, y, colors[3], 1)
-        p.dot(x, y, colors[i % 3 + 5], alpha)
-        p.glow_line(lx, ly, x, y, 3, colors[4], alpha * .1)
-    arrival = max(0, 1 - abs(t - .62) / .16)
-    if arrival > 0:
-        p.disc(tx, ty, 1.4, colors[7], arrival)
-        p.glow(tx, ty, 12, colors[5], arrival * .4)
+    q = t / .3
+    light(p, o.get('idle_phase', 0), {**o, 'size': o.get('size', 1) * (1 - .92 * q * q),
+                                    'opacity': 1 - q * q, 'glow': 1})
 
 
 def laser(p, t, o):
@@ -266,14 +241,14 @@ EFFECTS = {
     'landing': EffectSpec((112, 88), (56, 55), .55, False, 60, contact, {'palette': WARM, 'seed': 53}),
     'wall': EffectSpec((96, 112), (40, 56), .42, False, 60, contact,
                        {'palette': WARM, 'seed': 53, 'wall': True}),
-    'absorb': EffectSpec((136, 128), (68, 64), .9, False, 60, absorb,
-                         {'palette': RED, 'seed': 71, 'target_x': -36, 'target_y': 8}),
+    'absorb': EffectSpec((136, 128), (68, 64), .3, False, 60, absorb,
+                         {'palette': RED, 'seed': 71, 'size': .55, 'idle_phase': 0}),
     'source': EffectSpec((192, 160), (96, 80), 2.4, True, 30, light,
                          {'palette': RED, 'seed': 21, 'glow': 1}),
     'smallSource': EffectSpec((64, 64), (32, 32), 2.4, True, 30, small_source,
                               {'palette': RED, 'seed': 71}),
-    'lightAbsorb': EffectSpec((192, 160), (96, 80), .9, False, 30, absorb,
-                              {'palette': RED, 'seed': 21, 'idle_phase': 0, 'target_x': -56, 'target_y': 10}),
+    'lightAbsorb': EffectSpec((192, 160), (96, 80), .3, False, 30, absorb,
+                              {'palette': RED, 'seed': 21, 'idle_phase': 0}),
     'laser': EffectSpec((196, 72), (20, 36), 3.2, True, 30, laser,
                         {'palette': ELECTRIC, 'seed': 83}),
     'speedTrail': EffectSpec((288, 160), (208, 112), .8, True, 60, speed_trail,
