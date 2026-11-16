@@ -25,8 +25,9 @@ class AbsorbSource:
 class Spikes:
     """고정 가시의 위험 영역. 사망 처리는 플레이어의 기존 경로 판정을 사용한다."""
 
-    def __init__(self, area: AABB):
+    def __init__(self, area: AABB, *, ceiling=False):
         self.area = area
+        self.ceiling = ceiling
 
 
 class JumpPlatform:

@@ -134,6 +134,7 @@ class Sparkles:
         self.close()
         self.flip = flip
         self.effect = PicoEffect('absorbBoost', stage=stage)
+        self.effect.prerender()
 
     def update(self, dt):
         if self.effect is not None:

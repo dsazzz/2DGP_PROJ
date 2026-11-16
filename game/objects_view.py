@@ -34,6 +34,7 @@ class AbsorbSourceView:
         self._consumed = self.source.consumed
         if not self._consumed:
             self.effect = PicoEffect('source')
+            self.effect.prerender_loop()
 
     def update(self, dt):
         if not self.source.consumed and self._consumed:
@@ -77,10 +78,15 @@ class SpikesView:
             self.image = p.load_image(str(self.image_path))
         left, top, width, height = self.frame['rect']
         danger_x, danger_y, danger_w, danger_h = self.frame['hazard_rect_px']
+        flip = ''
+        if self.spikes.ceiling:
+            danger_x = width - danger_x - danger_w
+            danger_y = height - danger_y - danger_h
+            flip = 'hv'
         area = self.spikes.area
         scale_x, scale_y = area.width / danger_w, area.height / danger_h
         draw_clip(self.image,
-            left, self.image.h - top - height, width, height, 0, '',
+            left, self.image.h - top - height, width, height, 0, flip,
             area.left - offset[0] + (width / 2 - danger_x) * scale_x,
             area.top - offset[1] + (danger_y - height / 2) * scale_y,
             width * scale_x, height * scale_y,

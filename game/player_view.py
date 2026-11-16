@@ -57,6 +57,7 @@ class PlayerView:
         self.animation = Animation(self.data)
         self._appearance_override = None
         self.image, self.glow_images = None, {}
+        self._motion_atlas = None
         self.trail = self.echoes = self.sparkles = self.death_effect = None
         self.samples = []
         self.reset()
@@ -96,10 +97,17 @@ class PlayerView:
             self.samples.clear()
             if self.echoes is not None:
                 self.echoes.close()
-                self.echoes = None
             self._last_appearance = appearance
         if self.trail is not None:
             self.trail.options['stage'] = appearance
+
+    def preload(self):
+        """플레이 중 단계 변경으로 이미지 파일을 읽는 지연을 만들지 않는다."""
+        self.image = p.load_image(str(self.assets / self.data['atlas']))
+        for stage, preset in enumerate(self.glow['presets'], 1):
+            self.glow_images[stage] = p.load_image(str(self.assets / preset['file']))
+        self._motion_atlas = load_rgba(self.assets / self.data['atlas'])
+        self.echoes = MotionEchoes(self._motion_atlas)
 
     def play_absorb_effect(self):
         if self.player.state == 'DEAD':
@@ -230,7 +238,9 @@ class PlayerView:
             self.glow_images[self.appearance] = p.load_image(str(self.assets / preset['file']))
         if self.trail is not None and self.appearance > 1:
             if self.echoes is None:
-                self.echoes = MotionEchoes(load_rgba(self.assets / self.data['atlas']))
+                if self._motion_atlas is None:
+                    self._motion_atlas = load_rgba(self.assets / self.data['atlas'])
+                self.echoes = MotionEchoes(self._motion_atlas)
             self.echoes.draw(self.samples, self.elapsed, stage=self.appearance, offset=offset)
             self.trail.draw(x, y, scale=self.zoom * 2, flip=self.flip,
                             angle=-self.effect_angle if self.flip else self.effect_angle, layer='back')
@@ -267,4 +277,5 @@ class PlayerView:
     def close(self):
         self._close_effects()
         self.image = None
+        self._motion_atlas = None
         self.glow_images.clear()

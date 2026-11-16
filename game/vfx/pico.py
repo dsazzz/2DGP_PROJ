@@ -4,11 +4,24 @@ Close these textures before closing the pico2d canvas. No PNG files are written
 or reloaded during gameplay. Positions are in pico2d's bottom-left coordinates.
 """
 import ctypes
+from functools import lru_cache
+import json
 import math
 
 import numpy as np
 
 from .runtime import Effect
+
+
+@lru_cache(maxsize=4)
+def _effect_frames(name, options_json):
+    """같은 효과 프레임을 모든 개체·재시작에서 공유한다. SDL 자원은 저장하지 않는다."""
+    effect = Effect(name, **json.loads(options_json))
+    frames = []
+    for index in range(round(effect.spec.duration * effect.spec.fps)):
+        effect.time = index / effect.spec.fps
+        frames.append(effect.rgba())
+    return tuple(frames)
 
 
 def load_rgba(path):
@@ -114,9 +127,21 @@ class StreamingTexture:
 class PicoEffect:
     """A live effect. update(dt), draw(x,y), then close() before canvas shutdown."""
     def __init__(self, name, **options):
+        self.name = name
         self.effect = Effect(name, **options)
         self.texture = StreamingTexture()
         self._upload_key = None
+        self._loop = None
+
+    def prerender(self):
+        """게임 시작 전에 효과를 굽고 재생 중에는 픽셀 계산을 생략한다."""
+        options = json.dumps(self.options, sort_keys=True)
+        self._loop = (options, _effect_frames(self.name, options))
+
+    def prerender_loop(self):
+        if not self.effect.spec.loop:
+            raise ValueError('Only looping effects can be prerendered')
+        self.prerender()
 
     @property
     def options(self):
@@ -137,9 +162,15 @@ class PicoEffect:
         if (layer is not None and layer != self.effect.spec.layer) or self.done():
             return
         # Runtime options may change (appearance/grounded/target), even at the same time.
-        key = (self.effect.time, self.effect._stop_at, repr(self.options), layer)
+        cached = (self._loop is not None and math.isinf(self.effect._stop_at)
+                  and self._loop[0] == json.dumps(self.options, sort_keys=True))
+        index = None
+        if cached:
+            index = math.floor((self.effect.time + 1e-9) * self.effect.spec.fps)
+            index = index % len(self._loop[1]) if self.effect.spec.loop else min(index, len(self._loop[1]) - 1)
+        key = (index if cached else self.effect.time, self.effect._stop_at, repr(self.options), layer)
         if key != self._upload_key:
-            self.texture.upload(self.effect.rgba(layer))
+            self.texture.upload(self._loop[1][index] if cached else self.effect.rgba(layer))
             self._upload_key = key
         self.texture.draw(x, y, origin=self.effect.spec.origin, scale=scale, flip=flip, angle=angle)
 
