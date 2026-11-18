@@ -1,11 +1,12 @@
 """월드 좌표를 유지하면서 진행 방향의 앞쪽을 보여주는 2D 카메라."""
 import math
 
-from game.collision import AABB
+from game.core.collision import AABB
+from game.core.display import LOGICAL_SIZE
 
 
 class Camera:
-    def __init__(self, bounds, size=(640, 360)):
+    def __init__(self, bounds, size=LOGICAL_SIZE):
         self.bounds = bounds
         self.width, self.height = size
         self.look_ahead = self.width * .1
