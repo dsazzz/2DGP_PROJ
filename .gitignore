@@ -1,5 +1,4 @@
-# Only include runtime folders, dependency setup and this ignore policy.
-# Everything else at the project root (docs, README, local tools, etc.) is ignored.
+# Keep game runtime and art; local documentation and verification stay private.
 /*
 !/.gitignore
 !/game/
@@ -43,7 +42,11 @@ temp/
 # Local secrets
 .env
 .env.*
-
+/README.md
+/AGENTS.md
+/tests/
+/docs/
+/tools/
 # OS metadata
 .DS_Store
 Thumbs.db
