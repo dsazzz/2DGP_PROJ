@@ -2,6 +2,27 @@
 import json
 from pathlib import Path
 
+from game.core.collision import AABB
+from game.objects.models import connect_electric
+from game.core.paths import ART_ROOT
+
+
+def entity_bounds(entity, level_height, offset=(0, 0), definition=None):
+    """LDtk pivot and layer offset -> bottom-left visual rectangle, once."""
+    definition = definition or {}
+    px, py = entity.get('__pivot', (definition.get('pivotX', 0), definition.get('pivotY', 0)))
+    w, h = entity['width'], entity['height']
+    x, y = entity['px']
+    return [x + offset[0] - w*px, level_height - y - offset[1] - h*(1-py), w, h]
+
+
+def _anchor(visual, frame):
+    """World position of the artwork's anchor, independent of editor pivot."""
+    x, y, w, h = visual['rect']
+    _, _, sw, sh = visual['source']
+    ax, ay = frame['anchor_px']
+    return [x + ax*w/sw, y + h - ay*h/sh]
+
 
 def _fields(entity):
     return {field['__identifier']: field['__value'] for field in entity.get('fieldInstances', ())
@@ -33,6 +54,47 @@ def _rectangles(values, columns, rows, cell):
     return result + list(active.values())
 
 
+def _electric_layer(values, columns, rows, cell, offset, level_height, solids):
+    """Translate editor cells to world cells and explicit adjacency, at the boundary."""
+    if len(values) != columns*rows or any(value not in (0,1) for value in values):
+        raise ValueError('LDtk: Electric must contain only empty (0) and Electric (1) cells')
+    ox,oy = offset
+    indices, cells = {}, []
+    for row in range(rows):
+        for col in range(columns):
+            if values[row*columns+col]:
+                indices[col,row] = len(cells)
+                cells.append(AABB(ox+col*cell, level_height-oy-(row+1)*cell, cell, cell))
+    links = [(index,indices[key]) for (col,row),index in indices.items()
+             for key in ((col+1,row),(col,row+1)) if key in indices]
+    return connect_electric(cells,links,tuple(AABB(*area) for area in solids))
+
+
+def _tile_layer(layer, tileset, base, height, environment):
+    """Return world sprite rectangles, with no LDtk fields left for the renderer."""
+    size = tileset['tileGridSize']
+    ox,oy = layer.get('__pxTotalOffsetX',0),layer.get('__pxTotalOffsetY',0)
+    detailed = tileset['identifier'] == 'Terrain' and size == 16
+    image = (ART_ROOT/'environment'/environment['terrain_detail']['image'] if detailed
+             else base/tileset['relPath'])
+    result = []
+    for tile in layer.get('autoLayerTiles',()) or layer.get('gridTiles',()):
+        x,y = tile['px'][0]+ox,height-tile['px'][1]-oy-size
+        left,top = tile['src']
+        if detailed:
+            # The editor uses representative connection shapes; material is world aligned.
+            column,row = left//16,top//16
+            if not (0 <= column < 4 and 0 <= row < 4):
+                raise ValueError('LDtk: unsupported terrain connection shape')
+            patch_x,patch_y = int(x//size)%12,(-int(y//size)-1)%8
+            index = (row*4+column)*96+patch_y*12+patch_x
+            left,top = index%32*16,index//32*16
+        flip = ('h' if tile['f']&1 else '')+('v' if tile['f']&2 else '')
+        result.append({'rect':[x,y,size,size], 'source':[left,top,size,size],
+                       'flip':flip, 'opacity':layer.get('__opacity',1)*tile.get('a',1)})
+    return {'image':str(image.resolve()),'tiles':result}
+
+
 def load_ldtk(path, identifier=None):
     path = Path(path)
     project = json.loads(path.read_text(encoding='utf-8-sig'))
@@ -45,14 +107,22 @@ def load_ldtk(path, identifier=None):
     if level.get('layerInstances') is None and level.get('externalRelPath'):
         level = json.loads((path.parent / level['externalRelPath']).read_text(encoding='utf-8-sig'))
     width, height = level['pxWid'], level['pxHei']
-    data = {key: [] for key in ('floor', 'platforms', 'one_way', 'spikes', 'ceiling_spikes', 'sources', 'moving',
-                                'disappearing', 'jump_platforms', 'checkpoints', 'sections', 'tile_layers')}
-    data.update(size=[width, height], ldtk_path=str(path.resolve()))
+    data = {key: [] for key in ('floor', 'platforms', 'one_way', 'sources', 'moving',
+                                'disappearing', 'jump_platforms', 'checkpoints', 'sections', 'tile_layers', 'electric')}
+    data.update(size=[width, height])
     tilesets = {item['uid']: item for item in project['defs']['tilesets']}
+    definitions = {item['identifier']: item for item in project['defs']['entities']}
+    environment = json.loads((ART_ROOT / 'environment/environment.json').read_text(encoding='utf-8'))
+    assets = {item['id']: item for item in environment['assets'] if 'rect' in item}
+    data['visuals'] = {key: [] for key in ('platforms', 'one_way', 'moving', 'disappearing',
+                                          'jump_platforms')}
     spawn, exit_area, checkpoints = None, None, []
+    electric_layers = []
     for layer in reversed(level.get('layerInstances') or ()):
         ox, oy = layer.get('__pxTotalOffsetX', 0), layer.get('__pxTotalOffsetY', 0)
         cell = layer['__gridSize']
+        if layer['__identifier'] == 'Electric' and layer['__type'] == 'IntGrid':
+            electric_layers.append((layer['intGridCsv'], layer['__cWid'], layer['__cHei'], cell, (ox, oy)))
         if layer['__identifier'] == 'Collision' and layer['__type'] == 'IntGrid':
             values, columns, rows = layer['intGridCsv'], layer['__cWid'], layer['__cHei']
             if len(values) != columns * rows or any(value not in (0, 1) for value in values):
@@ -62,28 +132,47 @@ def load_ldtk(path, identifier=None):
         tiles = layer.get('autoLayerTiles', ()) or layer.get('gridTiles', ())
         if tiles:
             tileset = tilesets[layer['__tilesetDefUid']]
-            data['tile_layers'].append({
-                'image': str((path.parent / tileset['relPath']).resolve()),
-                'size': tileset['tileGridSize'], 'offset': [ox, oy],
-                'opacity': layer.get('__opacity', 1), 'tiles': tiles,
-            })
+            data['tile_layers'].append(_tile_layer(layer,tileset,path.parent,height,environment))
         for entity in layer.get('entityInstances', ()):
             kind, fields = entity['__identifier'], _fields(entity)
-            x, y = entity['px'][0] + ox, height - entity['px'][1] - oy
+            definition = definitions.get(kind, {})
+            box = entity_bounds(entity, height, (ox, oy), definition)
+            left, bottom, ew, eh = box
+            tile = entity.get('__tile') or definition.get('tileRect')
+            visual = None
+            if tile:
+                mode = definition.get('tileRenderMode', 'Stretch')
+                if mode != 'Stretch' and kind not in ('AbsorbSource', 'PlayerSpawn'):
+                    raise ValueError(f'LDtk: {kind} needs Stretch tile rendering, got {mode}')
+                visual = {'rect': box, 'source': [tile[k] for k in ('x', 'y', 'w', 'h')],
+                          'image': str((path.parent / tilesets[tile['tilesetUid']]['relPath']).resolve())}
+            x, y = left, bottom + eh
             ew, eh = entity['width'], entity['height']
             thickness = fields.get('Thickness', 8)
-            area = [x, y - thickness, ew, thickness]
+            # Platform art contains transparent space above the contact surface.
+            frame = next((item for item in assets.values() if visual and
+                          item['rect'][:2] == visual['source'][:2] and
+                          Path(environment['atlases'][item['atlas']]['image']).name == Path(visual['image']).name), None)
+            surface = frame.get('surface_y_px', 0) / frame['rect'][3] if frame else 0
+            area = [left, bottom + eh*(1-surface) - thickness, ew, thickness]
             if kind == 'PlayerSpawn':
                 if spawn is not None:
                     raise ValueError('LDtk: use exactly one PlayerSpawn')
-                spawn = [x, y]
+                player = json.loads((ART_ROOT / 'player/player.json').read_text(encoding='utf-8-sig'))
+                ax, ay = player['anchor_px']
+                sw, sh = player['cell_size']
+                # LDtk stores pivots to three decimals; keep feet on integer terrain.
+                spawn = [round(left + ax*ew/sw), round(bottom + eh - ay*eh/sh)]
             elif kind == 'Checkpoint':
+                x, y = _anchor(visual, assets['terminal'])
                 checkpoints.append((fields.get('Order', 0), {
-                    'spawn': [x + fields.get('RespawnOffsetX', 24), y], 'terminal': [x, y]}))
+                    'spawn': [x + fields.get('RespawnOffsetX', 24), round(y)], 'terminal': [x, y],
+                    'visual': visual}))
             elif kind == 'Exit':
                 if exit_area is not None:
                     raise ValueError('LDtk: use exactly one Exit')
-                exit_area = [x - 28, y, 56, 104]
+                exit_area = box
+                data['exit_visual'] = visual
             elif kind == 'Platform':
                 data['platforms'].append(area)
             elif kind == 'OneWay':
@@ -95,27 +184,26 @@ def load_ldtk(path, identifier=None):
                 data['disappearing'].append({'area': area, 'warning_time': fields.get('WarningTime', .5),
                                              'hidden_time': fields.get('HiddenTime', 2)})
             elif kind == 'JumpPlatform':
-                data['jump_platforms'].append({'area': [x - 24, y, 48, 32.5],
+                frame = assets['spring_rest']
+                ax, ay = frame['anchor_px']
+                vw, vh = frame['visible_size']
+                sw, sh = visual['source'][2:]
+                area = [left + (ax-vw/2)*ew/sw, bottom + eh-ay*eh/sh, vw*ew/sw, vh*eh/sh]
+                data['jump_platforms'].append({'area': area,
                                               'launch_height': fields.get('LaunchHeight', 128)})
-            elif kind == 'Spikes':
-                # Entity 원점은 가시의 위험 영역 왼쪽 위. 그림 여백은 판정에 넣지 않는다.
-                hazard_height = fields.get('HazardHeight', 10.5)
-                data['spikes'].append([x, y - hazard_height, ew * 128 / 144, hazard_height])
-            elif kind == 'CeilingSpikes':
-                # 원점은 천장에 붙는 받침대 중앙. 뒤집힌 그림의 받침대(8)에서
-                # 위험 영역(31)까지 23px를 띄워 금속 받침과 여백은 무해하게 둔다.
-                hazard_height = fields.get('HazardHeight', 10.5)
-                hazard_width = ew * 128 / 144
-                top = y - 23 / 28 * hazard_height
-                data['ceiling_spikes'].append([x - hazard_width / 2, top - hazard_height,
-                                              hazard_width, hazard_height])
             elif kind == 'AbsorbSource':
                 size = fields.get('BodySize', 28)
-                data['sources'].append([x - size / 2, y - size / 2, size, size])
+                data['sources'].append([left + ew/2 - size/2, bottom + eh/2 - size/2, size, size])
             elif kind == 'Hint':
                 data['sections'].append({'x': x, 'hint': fields.get('Text', '')})
-    if spawn is None or exit_area is None:
-        raise ValueError('LDtk: add one PlayerSpawn and one Exit in an Entities layer')
+            visual_key = {'Platform': 'platforms', 'OneWay': 'one_way', 'MovingPlatform': 'moving',
+                          'DisappearingPlatform': 'disappearing', 'JumpPlatform': 'jump_platforms'}.get(kind)
+            if visual_key:
+                data['visuals'][visual_key].append(visual)
+    for values, columns, rows, cell, offset in electric_layers:
+        data['electric'].extend(_electric_layer(values, columns, rows, cell, offset, height, data['floor']))
+    if spawn is None:
+        raise ValueError('LDtk: add one PlayerSpawn in an Entities layer')
     checkpoints.sort(key=lambda item: item[0])
     data['checkpoints'] = [item for _, item in checkpoints]
     if checkpoints and checkpoints[0][0] == 0:

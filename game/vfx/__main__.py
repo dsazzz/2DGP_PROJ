@@ -1,4 +1,4 @@
-"""Standalone effect preview: python -m game.vfx (not the M1 game loop)."""
+"""Standalone effect preview: python -m game.vfx."""
 import argparse
 import json
 import math
@@ -40,8 +40,8 @@ def main():
     cues, screen = Cues(), ScreenLight()
     try:
         actor = p.load_image(str(root / 'art/player/player-atlas.png'))
-        terrain = p.load_image(str(root / 'art/environment/terrain.png'))
-        orb = p.load_image(str(root / 'art/player/dash-orb.png'))
+        terrain = p.load_image(str(root / 'art/environment/terrain/terrain.png'))
+        orb = p.load_image(str(root / 'art/previews/dash-orb.png'))
         font_path = Path(p.__file__).resolve().parent / 'data/NanumBarunGothic.ttf'
         if not font_path.exists():
             fonts = list(font_path.parent.glob('*.ttf'))
@@ -94,7 +94,7 @@ def main():
             s.SDL_SetRenderDrawColor(canvas.renderer, 19, 16, 30, 255)
             s.SDL_RenderClear(canvas.renderer)
             for column in range(20):
-                terrain.clip_draw(64, terrain.h - 64, 64, 64, column * 32 + 16, 112, 32, 32)
+                terrain.clip_draw(0, terrain.h-48-16,16,16,column*32+16,112,32,32)
             foot_x, foot_y = 320, 128 if grounded else 180
             if name in ('speedTrail', 'dashTrail', 'motionEchoes'):
                 foot_x += math.sin(elapsed * 2) * 70

@@ -4,8 +4,8 @@ import math
 
 from transitions import Machine
 
-from game.paths import ART_ROOT
-from game.collision import AABB, MoveResult, first_contact_time, move_and_collide, sweep_and_collide
+from game.core.paths import ART_ROOT
+from game.core.collision import AABB, MoveResult, first_contact_time, move_and_collide, sweep_and_collide
 
 
 SETTINGS = json.loads((ART_ROOT / 'player' / 'player-settings.json').read_text(encoding='utf-8'))

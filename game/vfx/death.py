@@ -2,7 +2,7 @@
 import json
 import math
 
-from game.paths import ART_ROOT
+from game.core.paths import ART_ROOT
 from .painter import TAU, clamp, fit, rand
 
 

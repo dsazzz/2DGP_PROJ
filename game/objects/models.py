@@ -1,7 +1,53 @@
 """맵에 배치하는 오브젝트의 상태와 동작. 표현 모듈에 의존하지 않는다."""
 import math
 
-from game.collision import AABB
+from game.core.collision import AABB
+
+ELECTRIC_DEPTH = 10.5
+
+
+class Electric:
+    """A lethal world object made of connected areas, regardless of placement tool."""
+    def __init__(self, bands):
+        self.bands = tuple(merge_straight_bands(bands))
+        self.hazards = tuple(area for area, _ in self.bands)
+        self.bounds = None
+        if self.hazards:
+            left = min(area.left for area in self.hazards)
+            bottom = min(area.bottom for area in self.hazards)
+            self.bounds = AABB(left, bottom, max(area.right for area in self.hazards)-left,
+                               max(area.top for area in self.hazards)-bottom)
+
+
+def connect_electric(cells, links, solids, depth=ELECTRIC_DEPTH):
+    """Build hazard bands from world-space cells and explicit neighbour links."""
+    half = depth/2
+    nodes = []
+    for area in cells:
+        left, bottom, right, top = area.left, area.bottom, area.right, area.top
+        cx, cy = left+area.width/2, bottom+area.height/2
+        touch_left = touch_right = touch_below = touch_above = False
+        for solid in solids:
+            if max(left, solid.left) < min(right, solid.right):
+                touch_below |= abs(solid.top-bottom) < 1e-6
+                touch_above |= abs(solid.bottom-top) < 1e-6
+            if max(bottom, solid.bottom) < min(top, solid.top):
+                touch_left |= abs(solid.right-left) < 1e-6
+                touch_right |= abs(solid.left-right) < 1e-6
+        if touch_left != touch_right:
+            cx = left+half if touch_left else right-half
+        if touch_below != touch_above:
+            cy = bottom+half if touch_below else top-half
+        nodes.append((cx,cy))
+    result = [(AABB(x-half,y-half,depth,depth),'junction') for x,y in nodes]
+    for first, second in links:
+        x,y = nodes[first]
+        nx,ny = nodes[second]
+        if x != nx:
+            result.append((AABB(min(x,nx),y-half,abs(nx-x),depth),'horizontal'))
+        if y != ny:
+            result.append((AABB(nx-half,min(y,ny),depth,abs(ny-y)),'vertical'))
+    return merge_straight_bands(result)
 
 
 class AbsorbSource:
@@ -20,14 +66,6 @@ class AbsorbSource:
             return False
         self.consumed = True
         return True
-
-
-class Spikes:
-    """고정 가시의 위험 영역. 사망 처리는 플레이어의 기존 경로 판정을 사용한다."""
-
-    def __init__(self, area: AABB, *, ceiling=False):
-        self.area = area
-        self.ceiling = ceiling
 
 
 class JumpPlatform:
@@ -160,3 +198,43 @@ class DisappearingPlatform:
             return False
         self.state, self.time_left = 'WARNING', self.warning_time
         return True
+
+
+def merge_straight_bands(bands):
+    groups, nodes = {}, []
+    for area, kind in bands:
+        if kind == 'junction':
+            nodes.append((area, kind))
+            continue
+        if kind not in ('horizontal','vertical'):
+            raise ValueError(f'Unknown electric band kind: {kind}')
+        horizontal = kind == 'horizontal'
+        key = ('horizontal', area.bottom, area.height) if horizontal else ('vertical', area.left, area.width)
+        interval = (area.left, area.right) if horizontal else (area.bottom, area.top)
+        groups.setdefault(key, []).append(interval)
+    result = []
+    for (kind, fixed, depth), intervals in groups.items():
+        intervals.sort()
+        start, end = intervals[0]
+        for next_start, next_end in intervals[1:]:
+            if next_start <= end + 1e-6:
+                end = max(end, next_end)
+            else:
+                result.append((AABB(start, fixed, end-start, depth) if kind == 'horizontal'
+                               else AABB(fixed, start, depth, end-start), kind))
+                start, end = next_start, next_end
+        result.append((AABB(start, fixed, end-start, depth) if kind == 'horizontal'
+                       else AABB(fixed, start, depth, end-start), kind))
+    for area, kind in nodes:
+        # Interior nodes on one continuous straight path need no separate sprite.
+        horizontal = any(k == 'horizontal' and b.left <= area.left and b.right >= area.right
+                         and b.bottom <= area.bottom and b.top >= area.top for b, k in result)
+        vertical = any(k == 'vertical' and b.bottom <= area.bottom and b.top >= area.top
+                       and b.left <= area.left and b.right >= area.right for b, k in result)
+        if horizontal != vertical:
+            continue
+        nodes_for_area = (area, kind)
+        result.append(nodes_for_area)
+    return result
+
+

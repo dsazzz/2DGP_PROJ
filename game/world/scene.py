@@ -1,18 +1,17 @@
-"""기존 동작들을 연결한 짧은 데모. 배치는 LDtk 프로젝트에서 읽는다."""
+"""Playable scene: input, world state and gameplay coordination."""
 
 import sdl2 as s
 
-from game.camera import Camera
-from game.collision import AABB, first_contact_time
-from game.level import load_ldtk
-from game.objects import AbsorbSource, DisappearingPlatform, JumpPlatform, MovingPlatform, Spikes
-from game.paths import ART_ROOT
-from game.player import MOVEMENT, Player
+from game.core.camera import Camera
+from game.core.display import LOGICAL_SIZE
+from game.core.collision import AABB, first_contact_time
+from game.objects.models import AbsorbSource, DisappearingPlatform, Electric, JumpPlatform, MovingPlatform
+from game.objects.player import MOVEMENT, Player
 
 
-class DemoScene:
-    def __init__(self, level_path=None):
-        self.data = load_ldtk(level_path or ART_ROOT / 'levels' / 'demo.ldtk')
+class PlayScene:
+    def __init__(self, level_data):
+        self.data = level_data
         self.bounds = AABB(0, 0, *self.data['size'])
         self.floors = tuple(AABB(*area) for area in self.data['floor'])
         self.platforms = tuple(AABB(*area) for area in self.data['platforms'])
@@ -21,10 +20,8 @@ class DemoScene:
             AABB(self.bounds.width, 0, 32, self.bounds.height),
         )
         self.one_way = tuple(AABB(*area) for area in self.data['one_way'])
-        self.spikes = tuple(Spikes(AABB(*area)) for area in self.data['spikes'])
-        self.spikes += tuple(Spikes(AABB(*area), ceiling=True)
-                             for area in self.data['ceiling_spikes'])
-        self.hazards = tuple(obj.area for obj in self.spikes)
+        self.electric = Electric(self.data['electric'])
+        self.hazards = self.electric.hazards
         self.sources = tuple(AbsorbSource(AABB(*area)) for area in self.data['sources'])
         self.moving = tuple(MovingPlatform(AABB(*obj['area']), obj['end_x'], obj['speed'])
                             for obj in self.data['moving'])
@@ -33,17 +30,17 @@ class DemoScene:
                                   for obj in self.data['disappearing'])
         self.jump_platforms = tuple(JumpPlatform(AABB(*obj['area']), obj['launch_height'])
                                    for obj in self.data['jump_platforms'])
-        self.exit = AABB(*self.data['exit'])
+        self.exit = AABB(*self.data['exit']) if self.data['exit'] is not None else None
         self.player = Player(*self.data['checkpoints'][0]['spawn'])
-        self.camera = Camera(self.bounds)
+        self.camera = Camera(self.bounds, size=LOGICAL_SIZE)
         self.held_keys = set()
         self.view = None
         self.restart(full=True)
 
     def open(self):
         # 데이터·물리 검증에는 SDL 리소스를 만들지 않아도 된다.
-        from game.demo_view import DemoView
-        self.view = DemoView(self)
+        from game.world.view import WorldView
+        self.view = WorldView(self)
 
     @property
     def active_one_way(self):
@@ -242,7 +239,7 @@ class DemoScene:
                     self.saved_level = self.player.speed_level
                     self.saved_sources = tuple(source.consumed for source in self.sources)
                     self.checkpoint_flash = 1.5
-            if self.player.body.overlaps(self.exit):
+            if self.exit is not None and self.player.body.overlaps(self.exit):
                 self.complete = True
                 self.held_keys.clear()
                 self.player.set_move_direction(0)

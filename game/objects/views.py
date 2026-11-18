@@ -1,11 +1,60 @@
 """오브젝트 상태를 읽어 이미지와 효과를 표시하고 해제한다."""
 import json
+from functools import lru_cache
 
 import pico2d as p
 
-from game.paths import ART_ROOT
-from game.rendering import draw_clip
+from game.core.paths import ART_ROOT
+from game.core.rendering import draw_clip
 from game.vfx.pico import PicoEffect
+from game.vfx.electric import ElectricEffect
+
+
+class ElectricView:
+    """Appearance of an Electric object; collision remains in the model."""
+    def __init__(self, electric):
+        self.electric = electric
+        self.effect = ElectricEffect(electric.bands)
+
+    def prerender(self):
+        self.effect.prerender()
+
+    def reset(self):
+        self.effect.reset()
+
+    def update(self, dt):
+        self.effect.update(dt)
+
+    def draw(self, camera):
+        self.effect.draw(camera)
+
+    def close(self):
+        self.effect.close()
+
+
+@lru_cache(maxsize=1)
+def environment_data():
+    return json.loads((ART_ROOT / 'environment/environment.json').read_text(encoding='utf-8'))
+
+
+def draw_visual(visual, images, offset=(0, 0), *, shift=(0, 0), source=None, frame=None, reference=None):
+    """Draw a world-space visual rectangle; state changes preserve its anchor."""
+    path = visual['image']
+    if path not in images:
+        images[path] = p.load_image(path)
+    image = images[path]
+    x, y, w, h = visual['rect']
+    clip = visual['source'] if source is None else source
+    if frame is not None and reference is not None:
+        sx, sy = w / reference['rect'][2], h / reference['rect'][3]
+        x += (reference['anchor_px'][0] - frame['anchor_px'][0])*sx
+        y += (reference['rect'][3] - reference['anchor_px'][1]
+              + frame['anchor_px'][1] - frame['rect'][3])*sy
+        w, h = frame['rect'][2]*sx, frame['rect'][3]*sy
+        clip = frame['rect']
+    left, top, width, height = clip
+    draw_clip(image, left, image.h-top-height, width, height, 0, '',
+              x+w/2-offset[0]+shift[0], y+h/2-offset[1]+shift[1], w, h)
 
 
 def _draw_platform(image, frames, area, offset):
@@ -62,47 +111,15 @@ class AbsorbSourceView:
             self.effect = None
 
 
-class SpikesView:
-    """가시 끝의 이미지 영역과 모델의 위험 영역을 같은 위치에 맞춘다."""
-
-    def __init__(self, spikes):
-        self.spikes = spikes
-        self.assets = ART_ROOT / 'environment'
-        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
-        self.frame = next(item for item in data['assets'] if item['id'] == 'spikes_up')
-        self.image_path = self.assets / data['atlases'][self.frame['atlas']]['image']
-        self.image = None
-
-    def draw(self, offset=(0, 0)):
-        if self.image is None:
-            self.image = p.load_image(str(self.image_path))
-        left, top, width, height = self.frame['rect']
-        danger_x, danger_y, danger_w, danger_h = self.frame['hazard_rect_px']
-        flip = ''
-        if self.spikes.ceiling:
-            danger_x = width - danger_x - danger_w
-            danger_y = height - danger_y - danger_h
-            flip = 'hv'
-        area = self.spikes.area
-        scale_x, scale_y = area.width / danger_w, area.height / danger_h
-        draw_clip(self.image,
-            left, self.image.h - top - height, width, height, 0, flip,
-            area.left - offset[0] + (width / 2 - danger_x) * scale_x,
-            area.top - offset[1] + (danger_y - height / 2) * scale_y,
-            width * scale_x, height * scale_y,
-        )
-
-    def close(self):
-        self.image = None
-
-
 class JumpPlatformView:
     """발판 상태를 읽어 기본·눌림 아틀라스 이미지를 표시한다."""
 
-    def __init__(self, platform, zoom=.5):
+    def __init__(self, platform, zoom=.5, *, visual=None, images=None):
         self.platform = platform
+        self.visual = visual
+        self.images = images if images is not None else {}
         self.assets = ART_ROOT / 'environment'
-        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        data = environment_data()
         self.frames = {item['id']: item for item in data['assets']
                        if item['id'] in ('spring_rest', 'spring_pressed')}
         self.atlases = data['atlases']
@@ -115,6 +132,9 @@ class JumpPlatformView:
 
     def draw(self, offset=(0, 0)):
         frame = self.frame
+        if self.visual is not None:
+            draw_visual(self.visual, self.images, offset, frame=frame, reference=self.frames['spring_rest'])
+            return
         if self.image is None:
             self.image = p.load_image(str(self.assets / self.atlases[frame['atlas']]['image']))
         left, top, width, height = frame['rect']
@@ -135,10 +155,12 @@ class JumpPlatformView:
 class PlatformView:
     """일반 철판과 한 종류의 얇은 통과 발판을 표시한다."""
 
-    def __init__(self, area, *, one_way=False):
+    def __init__(self, area, *, one_way=False, visual=None, images=None):
         self.area = area
+        self.visual = visual
+        self.images = images if images is not None else {}
         self.assets = ART_ROOT / 'environment'
-        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        data = environment_data()
         frames = {item['id']: item for item in data['assets']}
         prefix = 'pass_through' if one_way else 'solid'
         self.frames = tuple(frames[prefix + '-' + part] for part in ('left', 'middle', 'right'))
@@ -146,6 +168,9 @@ class PlatformView:
         self.image = None
 
     def draw(self, offset=(0, 0)):
+        if self.visual is not None:
+            draw_visual(self.visual, self.images, offset)
+            return
         if self.image is None:
             self.image = p.load_image(str(self.image_path))
         _draw_platform(self.image, self.frames, self.area, offset)
@@ -157,10 +182,12 @@ class PlatformView:
 class MovingPlatformView:
     """롤러와 방향 화살표가 있는 컨베이어 원본을 수평 이동 발판으로 사용한다."""
 
-    def __init__(self, platform):
+    def __init__(self, platform, *, visual=None, images=None):
         self.platform = platform
+        self.visual = visual
+        self.images = images if images is not None else {}
         self.assets = ART_ROOT / 'environment'
-        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        data = environment_data()
         frames = {item['id']: item for item in data['assets']}
         self.directions = {direction: frames['moving_platform_' + direction]
                            for direction in ('left', 'right')}
@@ -173,6 +200,11 @@ class MovingPlatformView:
         return (self.directions['left' if dx < 0 else 'right'],)
 
     def draw(self, offset=(0, 0)):
+        if self.visual is not None:
+            draw_visual(self.visual, self.images, offset,
+                        shift=(self.platform.area.left-self.platform.start_area.left, 0),
+                        source=self.frames[0]['rect'])
+            return
         if self.image is None:
             self.image = p.load_image(str(self.image_path))
         _draw_platform(self.image, self.frames, self.platform.area, offset)
@@ -184,10 +216,12 @@ class MovingPlatformView:
 class DisappearingPlatformView:
     """기본·경고 이미지를 선택하며 소멸 중에는 그리지 않는다."""
 
-    def __init__(self, platform):
+    def __init__(self, platform, *, visual=None, images=None):
         self.platform = platform
+        self.visual = visual
+        self.images = images if images is not None else {}
         self.assets = ART_ROOT / 'environment'
-        data = json.loads((self.assets / 'environment.json').read_text(encoding='utf-8'))
+        data = environment_data()
         frames = {item['id']: item for item in data['assets']}
         self.frame_sets = {
             state: tuple(frames[prefix + '-' + part] for part in ('left', 'middle', 'right'))
@@ -203,6 +237,11 @@ class DisappearingPlatformView:
 
     def draw(self, offset=(0, 0)):
         if not self.frames:
+            return
+        if self.visual is not None:
+            first = self.frames[0]['rect']
+            source = [first[0], first[1], sum(f['rect'][2] for f in self.frames), first[3]]
+            draw_visual(self.visual, self.images, offset, source=source)
             return
         if self.image is None:
             self.image = p.load_image(str(self.image_path))

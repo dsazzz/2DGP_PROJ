@@ -4,10 +4,10 @@ import math
 
 import pico2d as p
 
-from game.paths import ART_ROOT
-from game.rendering import draw_clip
-from game.collision import move_and_collide
-from game.player import MOVEMENT
+from game.core.paths import ART_ROOT
+from game.core.rendering import draw_clip
+from game.core.collision import move_and_collide
+from game.objects.player import MOVEMENT
 from game.vfx.death import FREEZE_TIME, recoil_offset
 from game.vfx.motion import MotionEchoes
 from game.vfx.pico import PicoEffect, load_rgba
