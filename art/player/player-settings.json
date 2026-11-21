@@ -8,6 +8,7 @@
     "jump_h_boost": 120,
     "var_jump_time": 0.15,
     "jump_grace_time": 0.1,
+    "corner_correction": 4,
     "gravity": 2700,
     "max_fall": 480,
     "fast_max_fall": 720,

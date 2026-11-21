@@ -24,6 +24,7 @@ APEX_SPEED, MAX_FALL, FAST_MAX_FALL = (
     MOVEMENT[key] for key in ('apex_speed', 'max_fall', 'fast_max_fall')
 )
 DASH_DURATION, END_DASH_SPEED = MOVEMENT['dash_duration'], MOVEMENT['end_dash_speed']
+CORNER_CORRECTION = MOVEMENT['corner_correction']
 DEATH_DURATION = SETTINGS['death']['duration']
 
 
@@ -286,7 +287,7 @@ class Player:
               offset=0.0, duration=0.0):
         if not self._moving_platforms or self._motion_dt == 0 or dy >= 0:
             return self._move_static(dx, dy, solids, one_way, hazards, death_y,
-                                     straight=straight, offset=offset, duration=duration)
+                                     straight=straight, offset=offset, duration=duration, correct_corner=True)
         solve = sweep_and_collide if straight else move_and_collide
         before = self.body
         static = solve(before, dx, dy, solids, one_way=one_way)
@@ -304,7 +305,7 @@ class Player:
                 contacts.append((time, platform))
         if not contacts:
             return self._move_static(dx, dy, solids, one_way, hazards, death_y,
-                                     straight=straight, offset=offset, duration=duration)
+                                     straight=straight, offset=offset, duration=duration, correct_corner=True)
         time, platform = min(contacts, key=lambda contact: contact[0])
         surface = platform.area_at(start + (end - start) * time)
         self._move_static(dx * time if straight else dx, surface.top - before.bottom,
@@ -330,11 +331,53 @@ class Player:
                                   self.grounded, contact.hit_top)
         return MoveResult(self.body, contact.hit_left, contact.hit_right, True, contact.hit_top)
 
+    def _retry_corner(self, before, result, dy, solids, one_way, hazards, death_y, offset, duration):
+        """머리나 발이 걸린 면의 양쪽 끝에서 가까운 쪽부터 시도한다."""
+        side = AABB(result.box.left, before.bottom, before.width, before.height)
+        face = result.box.top if dy > 0 else result.box.bottom
+        if dy < 0 and any(
+            area.left < side.right and side.left < area.right
+            and math.isclose(area.top, face, rel_tol=0, abs_tol=1e-7)
+            for area in one_way
+        ):
+            return result
+        blockers = [area for area in solids
+                    if area.left < side.right and side.left < area.right
+                    and math.isclose(area.bottom if dy > 0 else area.top, face,
+                                     rel_tol=0, abs_tol=1e-7)]
+        if not blockers:
+            return result
+        shifts = (min(area.left for area in blockers) - side.right,
+                  max(area.right for area in blockers) - side.left)
+        for shift in sorted(shifts, key=abs):
+            if abs(shift) > CORNER_CORRECTION:
+                continue
+            retry = move_and_collide(side, shift, dy, solids, one_way=one_way)
+            if retry.hit_top or retry.hit_bottom or retry.box.left != side.left + shift:
+                continue
+            start = AABB(retry.box.left, before.bottom, before.width, before.height)
+            if (death_y is not None and retry.box.bottom < death_y
+                    or first_contact_time(before, start.left - before.left, 0, hazards) is not None
+                    or first_contact_time(start, 0, dy, hazards) is not None):
+                continue
+            if dy < 0 and self._moving_platforms and self._motion_dt:
+                begin, end = offset / self._motion_dt, (offset + duration) / self._motion_dt
+                if any(platform.landing_time(start, 0, dy, begin, end) is not None
+                       for platform in self._moving_platforms):
+                    continue
+            return MoveResult(retry.box, result.hit_left or retry.hit_left,
+                              result.hit_right or retry.hit_right)
+        return result
+
     def _move_static(self, dx, dy, solids, one_way, hazards, death_y, *, straight=False,
-                     offset=0.0, duration=0.0):
+                     offset=0.0, duration=0.0, correct_corner=False):
         solve = sweep_and_collide if straight else move_and_collide
         before = self.body
         result = solve(before, dx, dy, solids, one_way=one_way)
+        if (correct_corner and not straight
+                and (result.hit_top or (result.hit_bottom and not self.grounded))):
+            result = self._retry_corner(before, result, dy, solids, one_way, hazards, death_y,
+                                        offset, duration)
         actual_dx, actual_dy = result.box.left - before.left, result.box.bottom - before.bottom
         if straight:
             paths = ((before, actual_dx, actual_dy),)

@@ -81,3 +81,14 @@
 종료 후 새로 누르면 지상에 있거나 공중 대시 횟수가 남아 있을 때 즉시 대시한다. 확인 명령은
 `python -m unittest tests.test_scene.InputTiming tests.test_scene.AbsorptionTiming`이다.
 [대시 입력](../game/world/scene.py)
+
+## 코너 보정
+
+`corner_correction`은 **최대 4px**로 16px 타일의 4분의 1이다. 점프 중 머리나 하강 중 발이
+일반 지형 모서리에 걸리면 수평으로 겹친 만큼만 옮겨 같은 세로 이동을 다시 시도한다.
+벽·전류·발판이 보정 경로를 막으면 원래 충돌 결과를 적용한다. 대시는 직선 첫 접촉 규칙을 사용한다.
+[보정 코드](../game/objects/player.py)
+
+60프레임에서 머리·발의 좌우 모서리를 확인했다. 0.5px가 걸리면 0.5px, 4px가 걸리면
+4px 옮기고, 5px가 걸리면 원래 위치에서 충돌한다.
+빠른 확인은 `python -c "from tests.test_gameplay import check_corner_correction; check_corner_correction()"`으로 실행한다.
