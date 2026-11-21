@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 
+import numpy as np
 import pico2d as p
 from pico2d import pico2d as canvas
 import sdl2 as s
@@ -18,7 +19,7 @@ from game.world.terrain import TerrainView
 from game.core.paths import ART_ROOT
 from game.objects.player_view import PlayerView
 from game.core.rendering import draw_clip
-from game.vfx.pico import PicoEffect
+from game.vfx.pico import PicoEffect, load_rgba
 from game.core.display import LOGICAL_SIZE, DEFAULT_VIEW_MODE, VIEW_SIZES
 
 
@@ -55,10 +56,33 @@ class WorldView:
         self.text_images = {}
         self.tiles = TerrainView(scene.data['tile_layers'])
         try:
+            self._load_backgrounds()
             self.tiles.preload()
         except Exception:
             self.close()
             raise
+
+    def _load_backgrounds(self):
+        # 기존 반투명 어두운 색을 배경 픽셀에 미리 적용한다.
+        tint = np.array([8, 6, 18], dtype=np.uint16) * 48
+        for name in ('lab-wall', 'containment', 'resonance'):
+            path = 'backgrounds/' + name + '.png'
+            pixels = load_rgba(ART_ROOT / 'environment' / path)
+            pixels[..., :3] = (pixels[..., :3].astype(np.uint16) * 207 + tint) // 255
+            height, width = pixels.shape[:2]
+            surface = s.SDL_CreateRGBSurfaceWithFormatFrom(ctypes.c_void_p(pixels.ctypes.data),
+                width, height, 32, width * 4, s.SDL_PIXELFORMAT_RGBA32)
+            if not surface:
+                raise RuntimeError(s.SDL_GetError().decode('utf-8'))
+            try:
+                texture = s.SDL_CreateTextureFromSurface(canvas.renderer, surface)
+            finally:
+                s.SDL_FreeSurface(surface)
+            if not texture:
+                raise RuntimeError(s.SDL_GetError().decode('utf-8'))
+            if (pixels[..., 3] == 255).all():
+                s.SDL_SetTextureBlendMode(texture, s.SDL_BLENDMODE_NONE)
+            self.images[path] = p.Image(texture)
 
     def reset(self):
         self.player.reset()
@@ -138,7 +162,6 @@ class WorldView:
             if -640 < x < scene.camera.width:
                 image = self.image('backgrounds/' + name + '.png')
                 draw_clip(image, 0, 0, image.w, image.h, 0, '', x + 320, scene.camera.height / 2, 640, 360)
-        self.rect(0, 0, scene.camera.width, scene.camera.height, (8, 6, 18, 48))
 
     def terrain(self):
         self.tiles.draw(self.scene.camera, self.images)
@@ -147,7 +170,7 @@ class WorldView:
         scene = self.scene
         offset = scene.camera.offset
         s.SDL_SetRenderDrawBlendMode(canvas.renderer, s.SDL_BLENDMODE_BLEND)
-        s.SDL_SetRenderDrawColor(canvas.renderer, 18, 15, 29, 255)
+        s.SDL_SetRenderDrawColor(canvas.renderer, 16, 13, 26, 255)
         s.SDL_RenderClear(canvas.renderer)
         self.background()
         self.terrain()
