@@ -17,6 +17,9 @@ RUN_ACCEL, RUN_REDUCE, AIR_MULT = (
 JUMP_SPEED, GRAVITY, DASH_SPEED = (
     MOVEMENT[key] for key in ('jump_speed', 'gravity', 'dash_speed')
 )
+APEX_SPEED, MAX_FALL, FAST_MAX_FALL = (
+    MOVEMENT[key] for key in ('apex_speed', 'max_fall', 'fast_max_fall')
+)
 DASH_DURATION = MOVEMENT['dash_duration']
 DEATH_DURATION = SETTINGS['death']['duration']
 
@@ -63,6 +66,7 @@ class Player:
         self.move_speed = MOVE_SPEEDS[0]
         self.move_direction = 0
         self.vx = self.vy = 0.0
+        self.set_vertical_input()
         self.facing = 1
         self.grounded = self.can_jump = True
         self.dashes = MOVEMENT['dash_charges']
@@ -87,6 +91,7 @@ class Player:
         self.death_elapsed = 0.0
         self.move_direction = 0
         self.vx = self.vy = 0.0
+        self.set_vertical_input()
         self.dash_left = self.dash_vx = self.dash_vy = self.land_left = 0.0
         self.can_jump = self.grounded = False
         self.contact = MoveResult(self.body)
@@ -147,6 +152,23 @@ class Player:
         # 상승·낙하 시간은 줄이되 점프 높이 v²/(2g)는 유지한다.
         return GRAVITY * self.speed_multiplier ** 2
 
+    @property
+    def near_apex(self):
+        return abs(self.vy) < APEX_SPEED * self.speed_multiplier
+
+    def vertical_motion(self, dt):
+        """이번 구간의 세로 변위와 속도를 계산한다."""
+        gravity = self.gravity
+        if not self.grounded and self.jump_held and self.near_apex:
+            gravity *= 0.5
+        fall_limit = (FAST_MAX_FALL if self.down_held else MAX_FALL) * self.speed_multiplier
+        vy = max(self.vy, -fall_limit)
+        # 상한에 닿기 전은 가속하고, 남은 시간은 일정 속도로 떨어진다.
+        gravity_time = min(dt, (vy + fall_limit) / gravity)
+        dy = vy * gravity_time - gravity * gravity_time ** 2 / 2
+        dy -= fall_limit * (dt - gravity_time)
+        return dy, max(-fall_limit, vy - gravity * dt)
+
     def set_speed_level(self, level):
         """이동과 공중 동작의 단계를 바꾼다. 위치·행동·대시는 유지한다."""
         if self.state != 'DEAD':
@@ -176,6 +198,11 @@ class Player:
         """좌(-1)·정지(0)·우(1) 의도를 저장한다. 행동 전환은 update에서 한다."""
         if self.state != 'DEAD':
             self.move_direction = (direction > 0) - (direction < 0)
+
+    def set_vertical_input(self, *, jump_held=False, down_held=False):
+        """정점 보정과 빠른 낙하에 쓰는 키 상태를 저장한다."""
+        self.jump_held = jump_held
+        self.down_held = down_held
 
     @property
     def body(self):
@@ -346,9 +373,7 @@ class Player:
         normal_dt = dt - dash_dt
         if normal_dt:
             self._update_run_velocity(normal_dt)
-            gravity = self.gravity
-            dy = self.vy * normal_dt - gravity * normal_dt ** 2 / 2
-            self.vy -= gravity * normal_dt
+            dy, self.vy = self.vertical_motion(normal_dt)
             self._move(self.vx * normal_dt, dy,
                        solids, one_way, hazards, death_y, offset=dash_dt, duration=normal_dt)
             if self.state == 'DEAD':

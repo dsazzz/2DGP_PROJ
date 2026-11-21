@@ -12,6 +12,7 @@ from game.objects.player import MOVEMENT, Player
 HORIZONTAL_KEYS = {s.SDLK_LEFT: -1, s.SDLK_a: -1, s.SDLK_RIGHT: 1, s.SDLK_d: 1}
 VERTICAL_KEYS = {s.SDLK_DOWN: -1, s.SDLK_s: -1, s.SDLK_UP: 1, s.SDLK_w: 1}
 DASH_KEYS = (s.SDLK_x, s.SDLK_LSHIFT, s.SDLK_RSHIFT)
+JUMP_KEYS = (s.SDLK_SPACE, s.SDLK_z)
 
 
 class PlayScene:
@@ -107,6 +108,7 @@ class PlayScene:
 
     def _clear_input(self):
         self.held_keys.clear()
+        self.player.set_vertical_input()
         self._queued_actions = []
         self._pending_action = None
         self._clear_absorb_input()
@@ -145,7 +147,7 @@ class PlayScene:
                     self._clear_input()
                 elif self.paused or self.complete or self.player.state == 'DEAD':
                     continue
-                elif key in (s.SDLK_SPACE, s.SDLK_z) + DASH_KEYS:
+                elif key in JUMP_KEYS + DASH_KEYS:
                     direction = self._dash_axes(key, events[index + 1:]) if key in DASH_KEYS else None
                     self._queued_actions.append((self.elapsed + MOVEMENT['action_buffer'], direction))
 
@@ -273,6 +275,10 @@ class PlayScene:
         left = s.SDLK_LEFT in self.held_keys or s.SDLK_a in self.held_keys
         right = s.SDLK_RIGHT in self.held_keys or s.SDLK_d in self.held_keys
         self.player.set_move_direction(right - left)
+        self.player.set_vertical_input(
+            jump_held=any(key in self.held_keys for key in JUMP_KEYS),
+            down_held=s.SDLK_DOWN in self.held_keys or s.SDLK_s in self.held_keys,
+        )
         self._absorb_input_left = max(0.0, self._absorb_input_left - dt)
         self.player.update(dt, self.solids, one_way=self.active_one_way,
                            hazards=self.hazards, death_y=-32, moving_platforms=self.moving)

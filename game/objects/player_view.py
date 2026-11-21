@@ -142,12 +142,13 @@ class PlayerView:
         player = self.player
         if player.jump_age < MOVEMENT['jump_start_time'] / player.speed_multiplier:
             return 'jump_start'
-        if abs(player.vy) < MOVEMENT['apex_speed'] * player.speed_multiplier:
+        if player.near_apex:
             return 'jump_apex'
         if player.vy > 0:
             return 'jump_rise'
         t = FALL_PREPARE_TIME
-        next_y = player.y + player.vy * t - player.gravity * t * t / 2
+        dy, _ = player.vertical_motion(t)
+        next_y = player.y + dy
         return 'fall' if self.landing_y is not None and next_y <= self.landing_y else 'fall_air'
 
     def _sync(self):
@@ -188,9 +189,8 @@ class PlayerView:
         self.landing_y = None
         if player.state != 'DEAD' and player.vy <= 0:
             t = FALL_PREPARE_TIME
-            future = move_and_collide(player.body, player.vx * t,
-                                      player.vy * t - player.gravity * t * t / 2,
-                                      solids, one_way=one_way)
+            dy, _ = player.vertical_motion(t)
+            future = move_and_collide(player.body, player.vx * t, dy, solids, one_way=one_way)
             if future.hit_bottom:
                 self.landing_y = future.box.bottom
         self._sync()
