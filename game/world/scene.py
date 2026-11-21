@@ -191,9 +191,8 @@ class PlayScene:
         if self.player.dash_left > 0:
             self._absorb_input_left = MOVEMENT['absorb_input_buffer']
             self._absorb_direction = direction
-            if self.player.grounded and self.player.dash_vy == 0:
+            if self.player.dash(*direction):
                 self._pending_action = None
-                self.player.dash(*direction)
             else:
                 self._buffer_action(direction)
         elif self.player.dash(*direction):

@@ -23,7 +23,7 @@ JUMP_H_BOOST, VAR_JUMP_TIME, JUMP_GRACE_TIME, ACTION_BUFFER = (
 APEX_SPEED, MAX_FALL, FAST_MAX_FALL = (
     MOVEMENT[key] for key in ('apex_speed', 'max_fall', 'fast_max_fall')
 )
-DASH_DURATION = MOVEMENT['dash_duration']
+DASH_DURATION, END_DASH_SPEED = MOVEMENT['dash_duration'], MOVEMENT['end_dash_speed']
 DEATH_DURATION = SETTINGS['death']['duration']
 
 
@@ -145,7 +145,9 @@ class Player:
             self.start_jump(math.sqrt(2 * self.gravity * height))
 
     def dash(self, dx=0, dy=0):
-        if self.state != 'DEAD' and (self.grounded or self.dashes > 0):
+        # 세로 대시 출발 틱에는 공중 대시 자격을 적용한다.
+        ground_dash = self.grounded and (self.dash_left == 0 or self.dash_vy == 0)
+        if self.state != 'DEAD' and (ground_dash or self.dashes > 0):
             return self.start_dash(dx, dy)
         return False
 
@@ -396,9 +398,11 @@ class Player:
                                 solids, one_way, hazards, death_y, straight=True, duration=dash_dt)
             if self.state == 'DEAD':
                 return
-            self.dash_left = max(0.0, self.dash_left - dash_dt)
-            if (result.hit_left or result.hit_right or result.hit_top
+            self.dash_left -= dash_dt
+            hit_wall = result.hit_left or result.hit_right
+            if (self.dash_left <= 1e-9 or hit_wall or result.hit_top
                     or result.hit_bottom and self.dash_vy < 0):
+                self.vx = 0.0 if hit_wall else self.dash_vx * END_DASH_SPEED / DASH_SPEED
                 self.dash_left = self.dash_vx = self.dash_vy = 0.0
         normal_dt = dt - dash_dt
         if normal_dt:

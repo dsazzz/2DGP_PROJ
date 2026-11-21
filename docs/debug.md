@@ -59,3 +59,22 @@
 착지해 전류를 피하는 경로에서 1·10단계 모두 127.92px 도약했다. 출구 값은 `None`이다.
 
 점프와 입력 확인만 할 때는 `python -m unittest tests.test_scene.InputTiming`을 실행한다.
+
+## 대시
+
+| 설정 | 이전 | 현재 |
+| --- | ---: | ---: |
+| `dash_speed` | 700px/초 | 700px/초 |
+| `dash_duration` | 0.20초 | 0.20초 |
+| `end_dash_speed` | 종료 시 수평 속도 0 | 480px/초 |
+| `dash_charges` | 1회 | 1회 |
+
+60프레임 평지에서 대시 구간은 12틱, 이동 거리는 140px(8.75칸)이다. 수평 대시가 끝나면
+일반 이동의 `vx`에 ±480px/초를 넘긴다. 오른쪽 대시 후 방향키를 놓은 다음 틱은
+460px/초로 감속하며 7.67px 전진한다. 대각선 종료는 가로 성분 ±339.41px/초, 수직 대시와
+벽에 막힌 대시의 종료는 0이다. [플레이어 이동](../game/objects/player.py)
+
+지상에 있거나 공중 대시 횟수가 남아 있으면 대시 도중과 직후에도 입력을 받은 물리 틱에 다시 시작한다.
+같은 틱에 흡수할 수 있으면 흡수를 먼저 처리한다. 확인 명령은
+`python -m unittest tests.test_scene.InputTiming tests.test_scene.AbsorptionTiming`이다.
+[대시 입력](../game/world/scene.py)
