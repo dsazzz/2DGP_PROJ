@@ -6,7 +6,7 @@ from game.core.camera import Camera
 from game.core.display import LOGICAL_SIZE
 from game.core.collision import AABB, first_contact_time
 from game.objects.models import AbsorbSource, DisappearingPlatform, Electric, JumpPlatform, MovingPlatform
-from game.objects.player import MOVEMENT, Player
+from game.objects.player import ACTION_BUFFER, MOVEMENT, Player
 
 
 HORIZONTAL_KEYS = {s.SDLK_LEFT: -1, s.SDLK_a: -1, s.SDLK_RIGHT: 1, s.SDLK_d: 1}
@@ -109,6 +109,7 @@ class PlayScene:
     def _clear_input(self):
         self.held_keys.clear()
         self.player.set_vertical_input()
+        self.player.jump_buffer_left = 0.0
         self._queued_actions = []
         self._pending_action = None
         self._clear_absorb_input()
@@ -122,7 +123,10 @@ class PlayScene:
         events = tuple(events)
         for index, event in enumerate(events):
             if event.type == s.SDL_KEYUP:
-                self.held_keys.pop(event.key.keysym.sym, None)
+                key = event.key.keysym.sym
+                self.held_keys.pop(key, None)
+                if key in JUMP_KEYS and not any(button in self.held_keys for button in JUMP_KEYS):
+                    self.player.set_vertical_input(down_held=self.player.down_held)
             elif (event.type == s.SDL_WINDOWEVENT
                   and event.window.event == s.SDL_WINDOWEVENT_FOCUS_LOST):
                 self._clear_input()
@@ -149,24 +153,27 @@ class PlayScene:
                     continue
                 elif key in JUMP_KEYS + DASH_KEYS:
                     direction = self._dash_axes(key, events[index + 1:]) if key in DASH_KEYS else None
-                    self._queued_actions.append((self.elapsed + MOVEMENT['action_buffer'], direction))
+                    self._queued_actions.append(direction)
 
     def _consume_queued_actions(self):
         """한 물리 틱에서 입력을 누른 순서대로 한 번씩 꺼낸다."""
         actions, self._queued_actions = self._queued_actions, []
-        for deadline, direction in actions:
+        for direction in actions:
             if direction is not None:
                 self._request_dash(direction)
-            elif self.player.jump():
-                self._pending_action = None
-                self._clear_absorb_input()
             else:
-                self._pending_action = deadline, None
+                self._pending_action = None
+                self.player.queue_jump()
+                if self.player.jump():
+                    self._clear_absorb_input()
 
     def _buffer_action(self, direction):
-        self._pending_action = self.elapsed + MOVEMENT['action_buffer'], direction
+        self._pending_action = self.elapsed + ACTION_BUFFER, direction
 
     def _start_buffered_action(self):
+        if self.player.grounded and self.player.jump_buffer_left > 0 and self.player.jump():
+            self._clear_absorb_input()
+            return
         if self._pending_action is None:
             return
         deadline, direction = self._pending_action
@@ -175,12 +182,10 @@ class PlayScene:
         elif self.player.grounded:
             self._pending_action = None
             self._clear_absorb_input()
-            if direction is None:
-                self.player.jump()
-            else:
-                self.player.dash(*direction)
+            self.player.dash(*direction)
 
     def _request_dash(self, direction):
+        self.player.jump_buffer_left = 0.0
         if self.try_absorb(direction):
             return
         if self.player.dash_left > 0:
@@ -248,6 +253,13 @@ class PlayScene:
     def update(self, dt):
         if self.paused or self.complete:
             return
+        left = s.SDLK_LEFT in self.held_keys or s.SDLK_a in self.held_keys
+        right = s.SDLK_RIGHT in self.held_keys or s.SDLK_d in self.held_keys
+        self.player.set_move_direction(right - left)
+        self.player.set_vertical_input(
+            jump_held=any(key in self.held_keys for key in JUMP_KEYS),
+            down_held=s.SDLK_DOWN in self.held_keys or s.SDLK_s in self.held_keys,
+        )
         if self._queued_actions and self.player.state != 'DEAD':
             self._consume_queued_actions()
         # 보류 중인 흡수는 같은 틱의 벽·위험 접촉보다 먼저 닿았는지까지 반영한다.
@@ -272,13 +284,6 @@ class PlayScene:
             platform.update(dt)
         for platform in self.disappearing:
             platform.update(dt, self.player.body)
-        left = s.SDLK_LEFT in self.held_keys or s.SDLK_a in self.held_keys
-        right = s.SDLK_RIGHT in self.held_keys or s.SDLK_d in self.held_keys
-        self.player.set_move_direction(right - left)
-        self.player.set_vertical_input(
-            jump_held=any(key in self.held_keys for key in JUMP_KEYS),
-            down_held=s.SDLK_DOWN in self.held_keys or s.SDLK_s in self.held_keys,
-        )
         self._absorb_input_left = max(0.0, self._absorb_input_left - dt)
         self.player.update(dt, self.solids, one_way=self.active_one_way,
                            hazards=self.hazards, death_y=-32, moving_platforms=self.moving)

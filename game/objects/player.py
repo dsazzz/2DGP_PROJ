@@ -17,6 +17,9 @@ RUN_ACCEL, RUN_REDUCE, AIR_MULT = (
 JUMP_SPEED, GRAVITY, DASH_SPEED = (
     MOVEMENT[key] for key in ('jump_speed', 'gravity', 'dash_speed')
 )
+JUMP_H_BOOST, VAR_JUMP_TIME, JUMP_GRACE_TIME, ACTION_BUFFER = (
+    MOVEMENT[key] for key in ('jump_h_boost', 'var_jump_time', 'jump_grace_time', 'action_buffer')
+)
 APEX_SPEED, MAX_FALL, FAST_MAX_FALL = (
     MOVEMENT[key] for key in ('apex_speed', 'max_fall', 'fast_max_fall')
 )
@@ -67,6 +70,7 @@ class Player:
         self.move_direction = 0
         self.vx = self.vy = 0.0
         self.set_vertical_input()
+        self.coyote_left = self.jump_buffer_left = 0.0
         self.facing = 1
         self.grounded = self.can_jump = True
         self.dashes = MOVEMENT['dash_charges']
@@ -92,6 +96,7 @@ class Player:
         self.move_direction = 0
         self.vx = self.vy = 0.0
         self.set_vertical_input()
+        self.coyote_left = self.jump_buffer_left = 0.0
         self.dash_left = self.dash_vx = self.dash_vy = self.land_left = 0.0
         self.can_jump = self.grounded = False
         self.contact = MoveResult(self.body)
@@ -102,6 +107,11 @@ class Player:
 
     def on_enter_JUMP(self, speed=None):
         self.vy = self.jump_speed if speed is None else speed
+        self.coyote_left = self.jump_buffer_left = self.var_jump_left = 0.0
+        if speed is None:
+            self.vx += JUMP_H_BOOST * self.speed_multiplier * self.move_direction
+            if self.jump_held:
+                self.var_jump_left = VAR_JUMP_TIME / self.speed_multiplier
         self.grounded = self.can_jump = False
         self.dash_left = self.land_left = 0.0
         self.jump_age = 0.0
@@ -116,8 +126,13 @@ class Player:
         self.dash_vx, self.dash_vy = dx / length * DASH_SPEED, dy / length * DASH_SPEED
         if consume_charge:
             self.dashes = max(0, self.dashes - 1)
+        self.coyote_left = self.jump_buffer_left = self.var_jump_left = 0.0
         self.can_jump = True
         self.vx = self.vy = self.land_left = 0.0
+
+    def queue_jump(self):
+        """점프 입력을 착지할 때까지 잠깐 보관한다."""
+        self.jump_buffer_left = ACTION_BUFFER
 
     def jump(self):
         if self.state != 'DEAD' and self.can_jump:
@@ -163,9 +178,11 @@ class Player:
             gravity *= 0.5
         fall_limit = (FAST_MAX_FALL if self.down_held else MAX_FALL) * self.speed_multiplier
         vy = max(self.vy, -fall_limit)
+        hold_time = min(dt, self.var_jump_left) if vy > 0 and self.jump_held else 0.0
+        dt -= hold_time
         # 상한에 닿기 전은 가속하고, 남은 시간은 일정 속도로 떨어진다.
         gravity_time = min(dt, (vy + fall_limit) / gravity)
-        dy = vy * gravity_time - gravity * gravity_time ** 2 / 2
+        dy = vy * (hold_time + gravity_time) - gravity * gravity_time ** 2 / 2
         dy -= fall_limit * (dt - gravity_time)
         return dy, max(-fall_limit, vy - gravity * dt)
 
@@ -179,6 +196,7 @@ class Player:
             self.vx *= ratio
             if not self.grounded:
                 self.vy *= ratio
+                self.var_jump_left /= ratio
 
     def increase_speed_level(self):
         """한 단계 올린다. 단계 수와 속도는 설정표를 따른다."""
@@ -192,6 +210,7 @@ class Player:
             self.can_jump = True
             self.land_left = MOVEMENT['land_time']
         self.dashes = MOVEMENT['dash_charges']
+        self.coyote_left = self.var_jump_left = 0.0
         self.y, self.vy, self.grounded = height, 0.0, True
 
     def set_move_direction(self, direction):
@@ -200,9 +219,11 @@ class Player:
             self.move_direction = (direction > 0) - (direction < 0)
 
     def set_vertical_input(self, *, jump_held=False, down_held=False):
-        """정점 보정과 빠른 낙하에 쓰는 키 상태를 저장한다."""
+        """점프 유지와 빠른 낙하에 쓰는 키 상태를 저장한다."""
         self.jump_held = jump_held
         self.down_held = down_held
+        if not jump_held:
+            self.var_jump_left = 0.0
 
     @property
     def body(self):
@@ -219,6 +240,13 @@ class Player:
         solids, one_way, hazards = tuple(solids), tuple(one_way), tuple(hazards)
         if self._check_danger(self.body, 0, 0, hazards, death_y):
             return
+        was_grounded = self.grounded
+        self.jump_buffer_left = max(0.0, self.jump_buffer_left - dt)
+        if self.coyote_left > 0:
+            self.coyote_left = max(0.0, self.coyote_left - dt)
+            if self.coyote_left <= 1e-9:
+                self.coyote_left = 0.0
+                self.can_jump = False
         self.contact = MoveResult(self.body)
         self._moving_platforms = tuple(moving_platforms)
         self._motion_dt = dt
@@ -237,6 +265,8 @@ class Player:
                 one_way += (rider.area,)
         self._update_motion(dt, solids, one_way, hazards, death_y)
         if self.state != 'DEAD':
+            if was_grounded and not self.grounded and not self.dash_left and self.can_jump:
+                self.coyote_left = JUMP_GRACE_TIME
             self._update_state()
 
     def _check_danger(self, box, dx, dy, hazards, death_y):
@@ -332,7 +362,7 @@ class Player:
         else:
             self.grounded = False
         if result.hit_top:
-            self.vy = 0.0
+            self.vy = self.var_jump_left = 0.0
         if result.hit_left or result.hit_right:
             self.vx = 0.0
         previous = self.contact
@@ -374,6 +404,7 @@ class Player:
         if normal_dt:
             self._update_run_velocity(normal_dt)
             dy, self.vy = self.vertical_motion(normal_dt)
+            self.var_jump_left = max(0.0, self.var_jump_left - normal_dt)
             self._move(self.vx * normal_dt, dy,
                        solids, one_way, hazards, death_y, offset=dash_dt, duration=normal_dt)
             if self.state == 'DEAD':
