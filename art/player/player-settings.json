@@ -4,7 +4,7 @@
     "run_accel": 6000,
     "run_reduce": 1200,
     "air_mult": 0.8,
-    "jump_speed": 340,
+    "jump_speed": 315,
     "jump_h_boost": 120,
     "var_jump_time": 0.15,
     "jump_grace_time": 0.1,
