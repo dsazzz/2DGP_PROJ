@@ -5,7 +5,7 @@
     "run_reduce": 1200,
     "air_mult": 0.8,
     "jump_speed": 340,
-    "gravity": 900,
+    "gravity": 2700,
     "max_fall": 480,
     "fast_max_fall": 720,
     "dash_speed": 700,
@@ -17,7 +17,7 @@
     "fall_prepare_time": 0.08,
     "land_time": 0.1,
     "jump_start_time": 0.067,
-    "apex_speed": 110
+    "apex_speed": 120
   },
   "body_size": [32, 48],
   "death": {
