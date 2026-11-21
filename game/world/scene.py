@@ -270,7 +270,9 @@ class PlayScene:
             platform.update(dt)
         for platform in self.disappearing:
             platform.update(dt, self.player.body)
-        self.player.set_move_direction(self.axes()[0])
+        left = s.SDLK_LEFT in self.held_keys or s.SDLK_a in self.held_keys
+        right = s.SDLK_RIGHT in self.held_keys or s.SDLK_d in self.held_keys
+        self.player.set_move_direction(right - left)
         self._absorb_input_left = max(0.0, self._absorb_input_left - dt)
         self.player.update(dt, self.solids, one_way=self.active_one_way,
                            hazards=self.hazards, death_y=-32, moving_platforms=self.moving)

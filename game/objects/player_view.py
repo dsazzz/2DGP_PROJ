@@ -188,7 +188,7 @@ class PlayerView:
         self.landing_y = None
         if player.state != 'DEAD' and player.vy <= 0:
             t = FALL_PREPARE_TIME
-            future = move_and_collide(player.body, player.move_direction * player.move_speed * t,
+            future = move_and_collide(player.body, player.vx * t,
                                       player.vy * t - player.gravity * t * t / 2,
                                       solids, one_way=one_way)
             if future.hit_bottom:

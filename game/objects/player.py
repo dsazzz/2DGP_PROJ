@@ -11,6 +11,9 @@ from game.core.collision import AABB, MoveResult, first_contact_time, move_and_c
 SETTINGS = json.loads((ART_ROOT / 'player' / 'player-settings.json').read_text(encoding='utf-8'))
 MOVEMENT = SETTINGS['movement']
 MOVE_SPEEDS = tuple(MOVEMENT['move_speeds'])
+RUN_ACCEL, RUN_REDUCE, AIR_MULT = (
+    MOVEMENT[key] for key in ('run_accel', 'run_reduce', 'air_mult')
+)
 JUMP_SPEED, GRAVITY, DASH_SPEED = (
     MOVEMENT[key] for key in ('jump_speed', 'gravity', 'dash_speed')
 )
@@ -58,7 +61,8 @@ class Player:
         self.x, self.y = self.start_x, self.start_y
         self.speed_level = 1
         self.move_speed = MOVE_SPEEDS[0]
-        self.move_direction = self.vy = 0
+        self.move_direction = 0
+        self.vx = self.vy = 0.0
         self.facing = 1
         self.grounded = self.can_jump = True
         self.dashes = MOVEMENT['dash_charges']
@@ -81,7 +85,8 @@ class Player:
         direction = -self.facing if direction is None else direction
         self.death_direction = 1 if direction >= 0 else -1
         self.death_elapsed = 0.0
-        self.move_direction = self.vy = 0
+        self.move_direction = 0
+        self.vx = self.vy = 0.0
         self.dash_left = self.dash_vx = self.dash_vy = self.land_left = 0.0
         self.can_jump = self.grounded = False
         self.contact = MoveResult(self.body)
@@ -107,7 +112,7 @@ class Player:
         if consume_charge:
             self.dashes = max(0, self.dashes - 1)
         self.can_jump = True
-        self.vy = self.land_left = 0.0
+        self.vx = self.vy = self.land_left = 0.0
 
     def jump(self):
         if self.state != 'DEAD' and self.can_jump:
@@ -148,8 +153,10 @@ class Player:
             before = self.speed_multiplier
             self.speed_level = max(1, min(level, len(MOVE_SPEEDS)))
             self.move_speed = MOVE_SPEEDS[self.speed_level - 1]
+            ratio = self.speed_multiplier / before
+            self.vx *= ratio
             if not self.grounded:
-                self.vy *= self.speed_multiplier / before
+                self.vy *= ratio
 
     def increase_speed_level(self):
         """한 단계 올린다. 단계 수와 속도는 설정표를 따른다."""
@@ -299,6 +306,8 @@ class Player:
             self.grounded = False
         if result.hit_top:
             self.vy = 0.0
+        if result.hit_left or result.hit_right:
+            self.vx = 0.0
         previous = self.contact
         self.contact = MoveResult(
             self.body, previous.hit_left or result.hit_left,
@@ -306,6 +315,19 @@ class Player:
             previous.hit_bottom or bottom, previous.hit_top or result.hit_top,
         )
         return result
+
+    def _update_run_velocity(self, dt):
+        """수평 속도를 입력에 맞추고 최고속도를 넘으면 천천히 낮춘다."""
+        multiplier = self.speed_multiplier
+        if abs(self.vx) > self.move_speed and self.vx * self.move_direction >= 0:
+            speed = max(self.move_speed, abs(self.vx) - RUN_REDUCE * multiplier ** 2 * dt)
+            self.vx = math.copysign(speed, self.vx)
+            return
+        target = self.move_direction * self.move_speed
+        change = RUN_ACCEL * multiplier * dt
+        if not self.grounded:
+            change *= AIR_MULT
+        self.vx += max(-change, min(change, target - self.vx))
 
     def _update_motion(self, dt, solids, one_way, hazards, death_y):
         self.jump_age += dt
@@ -323,10 +345,11 @@ class Player:
                 self.dash_left = self.dash_vx = self.dash_vy = 0.0
         normal_dt = dt - dash_dt
         if normal_dt:
+            self._update_run_velocity(normal_dt)
             gravity = self.gravity
             dy = self.vy * normal_dt - gravity * normal_dt ** 2 / 2
             self.vy -= gravity * normal_dt
-            self._move(self.move_direction * self.move_speed * normal_dt, dy,
+            self._move(self.vx * normal_dt, dy,
                        solids, one_way, hazards, death_y, offset=dash_dt, duration=normal_dt)
             if self.state == 'DEAD':
                 return
@@ -339,7 +362,7 @@ class Player:
         if self.state == 'DASH' and self.dash_left > 0:
             return
         if self.grounded:
-            if self.move_direction:
+            if self.move_direction or self.vx:
                 if self.state != 'RUN':
                     self.start_run()
             elif self.land_left > 0:
