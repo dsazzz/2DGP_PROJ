@@ -1,9 +1,9 @@
 {
   "movement": {
     "move_speeds": [270, 300, 330, 360, 390, 420, 450, 480, 510, 540],
-    "run_accel": 3000,
+    "run_accel": 6000,
     "run_reduce": 1200,
-    "air_mult": 0.65,
+    "air_mult": 0.8,
     "jump_speed": 340,
     "gravity": 900,
     "dash_speed": 700,
