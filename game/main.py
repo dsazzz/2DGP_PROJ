@@ -17,6 +17,7 @@ from game.world.level import load_ldtk
 from game.core.paths import ART_ROOT
 from game.core.camera import Camera
 from game.core.display import LOGICAL_SIZE, WINDOW_SIZE, DEFAULT_VIEW_MODE, VIEW_SIZES
+from game.core.loop import FIXED_DT, FixedStep
 
 
 TARGET_FPS = 144
@@ -66,15 +67,13 @@ def main(*, vsync=False, profile=False):
             scene.view.view_mode = mode
             scene.view.player.zoom = 1.0 if mode == 'logical_1920' else 0.5
 
-        accumulator, previous, running = 0.0, perf_counter(), True
-        fixed_dt = 1 / 144
+        stepper = FixedStep(clock=perf_counter)
+        running = True
         frame_dt = 1 / TARGET_FPS
-        frame_deadline = sample_start = previous
-        frames = draw_total = present_total = 0
+        frame_deadline = sample_start = perf_counter()
+        frames = update_steps = 0
+        update_total = draw_total = present_total = 0.0
         while running:
-            now = perf_counter()
-            accumulator += min(max(now - previous, 0.0), .1)
-            previous = now
             events, event = [], s.SDL_Event()
             while s.SDL_PollEvent(ctypes.byref(event)):
                 if event.type == s.SDL_QUIT or (
@@ -84,6 +83,7 @@ def main(*, vsync=False, profile=False):
                 event = s.SDL_Event()
             if not running:
                 break
+            now = perf_counter()
             if any(event.type == s.SDL_KEYDOWN and event.key.keysym.sym == s.SDLK_F5
                    and not event.key.repeat for event in events):
                 replacement = None
@@ -94,12 +94,13 @@ def main(*, vsync=False, profile=False):
                     if replacement is not None:
                         replacement.close()
                     print(f'LDtk reload failed: {exc}', flush=True)
-                    accumulator = 0.0
+                    stepper.reset()
                     continue
                 scene.close()
                 scene = replacement
                 set_view_mode(view_mode)
-                accumulator = 0.0
+                now = perf_counter()
+                stepper.reset(now)
                 events.clear()
             for item in events:
                 if item.type == s.SDL_KEYDOWN and not item.key.repeat:
@@ -109,10 +110,15 @@ def main(*, vsync=False, profile=False):
                     if mode:
                         set_view_mode(mode)
             scene.handle_events(events)
-            while accumulator + 1e-9 >= fixed_dt:
-                scene.update(fixed_dt)
-                accumulator = max(0.0, accumulator - fixed_dt)
+            steps = stepper.pump(now)
+            if profile:
+                update_start = perf_counter()
+            for _ in range(steps):
+                scene.update(FIXED_DT)
             draw_start = perf_counter()
+            if profile and steps:
+                update_steps += steps
+                update_total += draw_start - update_start
             scene.draw()
             present_start = perf_counter()
             p.update_canvas()
@@ -123,11 +129,14 @@ def main(*, vsync=False, profile=False):
                 present_total += presented - present_start
                 sample_time = presented - sample_start
                 if sample_time >= 1:
+                    update_ms = update_total * 1000 / update_steps if update_steps else 0.0
                     print(f'{frames / sample_time:6.1f} FPS | '
+                          f'update {update_ms:.2f} ms/step | '
                           f'draw {draw_total * 1000 / frames:.2f} ms | '
                           f'present {present_total * 1000 / frames:.2f} ms', flush=True)
                     sample_start = presented
-                    frames = draw_total = present_total = 0
+                    frames = update_steps = 0
+                    update_total = draw_total = present_total = 0.0
             if not vsync_active:
                 frame_deadline += frame_dt
                 if frame_deadline <= now:

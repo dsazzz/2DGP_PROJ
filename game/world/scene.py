@@ -107,6 +107,7 @@ class PlayScene:
 
     def _clear_input(self):
         self.held_keys.clear()
+        self._queued_actions = []
         self._pending_action = None
         self._clear_absorb_input()
 
@@ -144,14 +145,21 @@ class PlayScene:
                     self._clear_input()
                 elif self.paused or self.complete or self.player.state == 'DEAD':
                     continue
-                elif key in (s.SDLK_SPACE, s.SDLK_z):
-                    if self.player.jump():
-                        self._pending_action = None
-                        self._clear_absorb_input()
-                    else:
-                        self._buffer_action(None)
-                elif key in DASH_KEYS:
-                    self._request_dash(self._dash_axes(key, events[index + 1:]))
+                elif key in (s.SDLK_SPACE, s.SDLK_z) + DASH_KEYS:
+                    direction = self._dash_axes(key, events[index + 1:]) if key in DASH_KEYS else None
+                    self._queued_actions.append((self.elapsed + MOVEMENT['action_buffer'], direction))
+
+    def _consume_queued_actions(self):
+        """한 물리 틱에서 입력을 누른 순서대로 한 번씩 꺼낸다."""
+        actions, self._queued_actions = self._queued_actions, []
+        for deadline, direction in actions:
+            if direction is not None:
+                self._request_dash(direction)
+            elif self.player.jump():
+                self._pending_action = None
+                self._clear_absorb_input()
+            else:
+                self._pending_action = deadline, None
 
     def _buffer_action(self, direction):
         self._pending_action = self.elapsed + MOVEMENT['action_buffer'], direction
@@ -238,6 +246,8 @@ class PlayScene:
     def update(self, dt):
         if self.paused or self.complete:
             return
+        if self._queued_actions and self.player.state != 'DEAD':
+            self._consume_queued_actions()
         # 보류 중인 흡수는 같은 틱의 벽·위험 접촉보다 먼저 닿았는지까지 반영한다.
         horizon = min(dt, self.player.dash_left, self._absorb_input_left)
         if horizon > 0:
