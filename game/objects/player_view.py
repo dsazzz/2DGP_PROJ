@@ -58,6 +58,7 @@ class PlayerView:
         self._appearance_override = None
         self.image, self.glow_images = None, {}
         self._motion_atlas = None
+        self._trails_preloaded = False
         self.trail = self.echoes = self.sparkles = self.death_effect = None
         self.samples = []
         self.reset()
@@ -108,6 +109,11 @@ class PlayerView:
             self.glow_images[stage] = p.load_image(str(self.assets / preset['file']))
         self._motion_atlas = load_rgba(self.assets / self.data['atlas'])
         self.echoes = MotionEchoes(self._motion_atlas)
+        for stage in (2, 3):
+            PicoEffect('speedTrail', stage=stage, grounded=True).prerender()
+            for grounded in (False, True):
+                PicoEffect('dashTrail', stage=stage, grounded=grounded).prerender()
+        self._trails_preloaded = True
 
     def play_absorb_effect(self):
         if self.player.state == 'DEAD':
@@ -242,6 +248,8 @@ class PlayerView:
                     self._motion_atlas = load_rgba(self.assets / self.data['atlas'])
                 self.echoes = MotionEchoes(self._motion_atlas)
             self.echoes.draw(self.samples, self.elapsed, stage=self.appearance, offset=offset)
+            if self._trails_preloaded:
+                self.trail.prerender()
             self.trail.draw(x, y, scale=self.zoom * 2, flip=self.flip,
                             angle=-self.effect_angle if self.flip else self.effect_angle, layer='back')
         frame = self.animation.frame

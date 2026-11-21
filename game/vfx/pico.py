@@ -13,7 +13,7 @@ import numpy as np
 from .runtime import Effect
 
 
-@lru_cache(maxsize=4)
+@lru_cache(maxsize=10)
 def _effect_frames(name, options_json):
     """같은 효과 프레임을 모든 개체·재시작에서 공유한다. SDL 자원은 저장하지 않는다."""
     effect = Effect(name, **json.loads(options_json))
@@ -139,7 +139,9 @@ class PicoEffect:
     def prerender(self):
         """게임 시작 전에 효과를 굽고 재생 중에는 픽셀 계산을 생략한다."""
         options = json.dumps(self.options, sort_keys=True)
-        self._loop = (options, _effect_frames(self.name, options))
+        if self._loop is None or self._loop[0] != options:
+            self._loop = (options, _effect_frames(self.name, options))
+            self._upload_key = None
 
     def prerender_loop(self):
         if not self.effect.spec.loop:
