@@ -179,7 +179,7 @@ class PlayScene:
         deadline, direction = self._pending_action
         if self.elapsed > deadline:
             self._pending_action = None
-        elif self.player.grounded:
+        elif self.player.grounded and self.player.dash_left == 0:
             self._pending_action = None
             self._clear_absorb_input()
             self.player.dash(*direction)
@@ -191,9 +191,7 @@ class PlayScene:
         if self.player.dash_left > 0:
             self._absorb_input_left = MOVEMENT['absorb_input_buffer']
             self._absorb_direction = direction
-            if self.player.dash(*direction):
-                self._pending_action = None
-            else:
+            if self.player.grounded and self.player.dash_left <= ACTION_BUFFER:
                 self._buffer_action(direction)
         elif self.player.dash(*direction):
             self._pending_action = None

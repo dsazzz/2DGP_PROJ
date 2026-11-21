@@ -145,9 +145,7 @@ class Player:
             self.start_jump(math.sqrt(2 * self.gravity * height))
 
     def dash(self, dx=0, dy=0):
-        # 세로 대시 출발 틱에는 공중 대시 자격을 적용한다.
-        ground_dash = self.grounded and (self.dash_left == 0 or self.dash_vy == 0)
-        if self.state != 'DEAD' and (ground_dash or self.dashes > 0):
+        if self.state != 'DEAD' and self.dash_left == 0 and (self.grounded or self.dashes > 0):
             return self.start_dash(dx, dy)
         return False
 
