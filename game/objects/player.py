@@ -67,8 +67,8 @@ class Player:
         self.death_elapsed = 0.0
         self.death_direction = -1
         self.contact = MoveResult(self.body)
-        # 이번 갱신의 (시작 상자, dx, dy, 시작 초, 이동 초). 흡수 등 외부 트리거가 읽는다.
-        self.movement_paths = []
+        # 이번 갱신에 실제로 지나간 대시 구간과 소요 시간.
+        self.dash_paths = []
         self._moving_platforms = ()
         self._motion_dt = 0.0
 
@@ -111,7 +111,8 @@ class Player:
 
     def jump(self):
         if self.state != 'DEAD' and self.can_jump:
-            self.start_jump()
+            return self.start_jump()
+        return False
 
     def bounce(self, height):
         """발판 등 외부 동작으로 위로 튕긴다. 현재 단계의 중력을 따른다."""
@@ -120,11 +121,12 @@ class Player:
 
     def dash(self, dx=0, dy=0):
         if self.state != 'DEAD' and (self.grounded or self.dashes > 0):
-            self.start_dash(dx, dy)
+            return self.start_dash(dx, dy)
+        return False
 
-    def redirect_dash(self, dx=0, dy=0):
-        """진행 중인 대시를 새 방향으로 다시 시작한다. 보유 횟수는 바꾸지 않는다."""
-        if self.state == 'DASH' and self.dash_left > 0:
+    def redirect_dash(self, dx=0, dy=0, *, recent_contact=False):
+        """대시 중이거나 장면이 방금 대시 접촉을 확인했을 때 방향을 바꾼다."""
+        if self.state != 'DEAD' and (self.dash_left > 0 or recent_contact):
             self.start_dash(dx, dy, consume_charge=False)
 
     @property
@@ -176,7 +178,7 @@ class Player:
     def update(self, dt, solids=(), *, one_way=(), hazards=(), death_y=None,
                moving_platforms=()):
         """위험 구역은 월드 AABB, death_y는 발이 내려가면 사망하는 높이다."""
-        self.movement_paths.clear()
+        self.dash_paths.clear()
         if self.state == 'DEAD':
             self.death_elapsed += dt
             return
@@ -278,12 +280,10 @@ class Player:
         for box, path_dx, path_dy in paths:
             if self._check_danger(box, path_dx, path_dy, hazards, death_y):
                 return MoveResult(self.body)
-            # 지형에 막히기 전의 실제 경로와 이동 시간을 트리거 판정에 제공한다.
-            if path_dx and dx:
-                ratio = abs(path_dx / dx)
-            else:
-                ratio = abs(path_dy / dy) if path_dy and dy else 0.0
-            self.movement_paths.append((box, path_dx, path_dy, offset, duration * ratio))
+            if straight:
+                # 지형에 막히기 전까지 실제로 이동한 시간과 경로다.
+                ratio = abs(path_dx / dx) if dx else abs(path_dy / dy) if dy else 0.0
+                self.dash_paths.append((box, path_dx, path_dy, offset, duration * ratio))
         self.x = result.box.left + self.body_width / 2
         self.y = result.box.bottom
         bottom = result.hit_bottom

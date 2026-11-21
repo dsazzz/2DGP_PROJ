@@ -9,6 +9,11 @@ from game.objects.models import AbsorbSource, DisappearingPlatform, Electric, Ju
 from game.objects.player import MOVEMENT, Player
 
 
+HORIZONTAL_KEYS = {s.SDLK_LEFT: -1, s.SDLK_a: -1, s.SDLK_RIGHT: 1, s.SDLK_d: 1}
+VERTICAL_KEYS = {s.SDLK_DOWN: -1, s.SDLK_s: -1, s.SDLK_UP: 1, s.SDLK_w: 1}
+DASH_KEYS = (s.SDLK_x, s.SDLK_LSHIFT, s.SDLK_RSHIFT)
+
+
 class PlayScene:
     def __init__(self, level_data):
         self.data = level_data
@@ -33,7 +38,7 @@ class PlayScene:
         self.exit = AABB(*self.data['exit']) if self.data['exit'] is not None else None
         self.player = Player(*self.data['checkpoints'][0]['spawn'])
         self.camera = Camera(self.bounds, size=LOGICAL_SIZE)
-        self.held_keys = set()
+        self.held_keys = {}
         self.view = None
         self.restart(full=True)
 
@@ -71,8 +76,7 @@ class PlayScene:
             source.consumed = consumed
         for obj in self.moving + self.disappearing + self.jump_platforms:
             obj.reset()
-        self.held_keys.clear()
-        self._clear_absorb_input()
+        self._clear_input()
         self.paused = self.complete = self._was_dead = False
         self.checkpoint_flash = 0.0
         self.camera.snap(self.player.x, self.player.y + self.player.body_height / 2)
@@ -80,12 +84,31 @@ class PlayScene:
             self.view.reset()
 
     def axes(self):
-        keys = self.held_keys
-        right = bool(keys & {s.SDLK_RIGHT, s.SDLK_d})
-        left = bool(keys & {s.SDLK_LEFT, s.SDLK_a})
-        up = bool(keys & {s.SDLK_UP, s.SDLK_w})
-        down = bool(keys & {s.SDLK_DOWN, s.SDLK_s})
-        return int(right) - int(left), int(up) - int(down)
+        return tuple(next((axis[key] for key in reversed(self.held_keys) if key in axis), 0)
+                     for axis in (HORIZONTAL_KEYS, VERTICAL_KEYS))
+
+    def _dash_axes(self, key, following):
+        """같은 입력 묶음에서 행동 키와 방향 키를 함께 누른 경우를 읽는다."""
+        dx, dy = self.axes()
+        for event in following:
+            if (event.type == s.SDL_WINDOWEVENT and event.window.event == s.SDL_WINDOWEVENT_FOCUS_LOST
+                    or event.type == s.SDL_KEYUP and event.key.keysym.sym == key):
+                break
+            if event.type != s.SDL_KEYDOWN or event.key.repeat:
+                continue
+            direction = event.key.keysym.sym
+            if direction in HORIZONTAL_KEYS:
+                dx = HORIZONTAL_KEYS[direction]
+            elif direction in VERTICAL_KEYS:
+                dy = VERTICAL_KEYS[direction]
+            else:
+                break
+        return dx, dy
+
+    def _clear_input(self):
+        self.held_keys.clear()
+        self._pending_action = None
+        self._clear_absorb_input()
 
     def _clear_absorb_input(self):
         self._absorb_input_left = 0.0
@@ -93,22 +116,22 @@ class PlayScene:
         self._absorb_contacts = {}
 
     def handle_events(self, events):
-        for event in events:
+        events = tuple(events)
+        for index, event in enumerate(events):
             if event.type == s.SDL_KEYUP:
-                self.held_keys.discard(event.key.keysym.sym)
+                self.held_keys.pop(event.key.keysym.sym, None)
             elif (event.type == s.SDL_WINDOWEVENT
                   and event.window.event == s.SDL_WINDOWEVENT_FOCUS_LOST):
-                self.held_keys.clear()
-                self._clear_absorb_input()
+                self._clear_input()
                 if not self.complete:
                     self.paused = True
             elif event.type == s.SDL_KEYDOWN:
                 key = event.key.keysym.sym
                 if event.key.repeat or key in self.held_keys:
                     continue
-                self.held_keys.add(key)
+                self.held_keys[key] = None
                 if key == s.SDLK_r:
-                    full = bool(self.held_keys & {s.SDLK_LSHIFT, s.SDLK_RSHIFT}) or self.complete
+                    full = s.SDLK_LSHIFT in self.held_keys or s.SDLK_RSHIFT in self.held_keys or self.complete
                     self.restart(full=full)
                     break
                 if key == s.SDLK_RETURN:
@@ -118,91 +141,119 @@ class PlayScene:
                     self.paused = False
                 elif key == s.SDLK_p and not self.complete:
                     self.paused = not self.paused
-                    self.held_keys.clear()
-                    self._clear_absorb_input()
+                    self._clear_input()
                 elif self.paused or self.complete or self.player.state == 'DEAD':
                     continue
                 elif key in (s.SDLK_SPACE, s.SDLK_z):
-                    self._clear_absorb_input()
-                    self.player.jump()
-                elif key in (s.SDLK_x, s.SDLK_LSHIFT, s.SDLK_RSHIFT):
-                    if self.player.state == 'DASH' and self.player.dash_left > 0:
-                        self._absorb_input_left = MOVEMENT['absorb_input_buffer']
-                        self._absorb_direction = self.axes()
-                        if not self.try_absorb() and self.player.grounded:
-                            self.player.dash(*self.axes())
-                    else:
+                    if self.player.jump():
+                        self._pending_action = None
                         self._clear_absorb_input()
-                        self.player.dash(*self.axes())
+                    else:
+                        self._buffer_action(None)
+                elif key in DASH_KEYS:
+                    self._request_dash(self._dash_axes(key, events[index + 1:]))
 
-    def try_absorb(self):
-        if (self.player.state != 'DASH' or self.player.dash_left <= 0
-                or any(self.player.body.overlaps(area) for area in self.hazards)):
+    def _buffer_action(self, direction):
+        self._pending_action = self.elapsed + MOVEMENT['action_buffer'], direction
+
+    def _start_buffered_action(self):
+        if self._pending_action is None:
+            return
+        deadline, direction = self._pending_action
+        if self.elapsed > deadline:
+            self._pending_action = None
+        elif self.player.grounded:
+            self._pending_action = None
+            self._clear_absorb_input()
+            if direction is None:
+                self.player.jump()
+            else:
+                self.player.dash(*direction)
+
+    def _request_dash(self, direction):
+        if self.try_absorb(direction):
+            return
+        if self.player.dash_left > 0:
+            self._absorb_input_left = MOVEMENT['absorb_input_buffer']
+            self._absorb_direction = direction
+            if self.player.grounded and self.player.dash_vy == 0:
+                self._pending_action = None
+                self.player.dash(*direction)
+            else:
+                self._buffer_action(direction)
+        elif self.player.dash(*direction):
+            self._pending_action = None
+            self._clear_absorb_input()
+        else:
+            self._buffer_action(direction)
+
+    def try_absorb(self, direction):
+        active = self.player.dash_left > 0
+        if self.player.state == 'DEAD' or not (active or self._absorb_contacts):
+            return False
+        body = self.player.body
+        if any(body.overlaps(area) for area in self.hazards):
             return False
         for source in self.sources:
             recent = self._absorb_contacts.get(source)
-            body = self.player.body
-            if not source.area.overlaps(body) and recent is not None:
-                body = recent[1]
-            if source.try_absorb(body):
-                direction = self._absorb_direction if self._absorb_input_left > 0 else self.axes()
+            contact = body if active and source.area.overlaps(body) else recent[1] if recent else None
+            if contact is not None and source.try_absorb(contact):
+                self._pending_action = None
                 self._clear_absorb_input()
-                self.player.redirect_dash(*direction)
+                self.player.redirect_dash(*direction, recent_contact=recent is not None)
                 self.player.increase_speed_level()
                 if self.view is not None:
                     self.view.player.play_absorb_effect()
                 return True
         return False
 
-    def _update_absorb_contacts(self, dt, dash_duration):
+    def _update_absorb_contacts(self, dt):
         """대시의 실제 이동 구간을 기억해 빠르게 지나친 직후의 재입력도 받는다."""
         self._absorb_contacts = {
             source: (left - dt, body) for source, (left, body) in self._absorb_contacts.items()
             if left > dt and not source.consumed
         }
-        if self.player.state != 'DASH' or self.player.dash_left <= 0:
-            self._clear_absorb_input()
+        if not self.player.dash_paths:
             return
         grace = MOVEMENT['absorb_contact_grace']
         for source in self.sources:
             if source.consumed:
                 continue
-            for box, dx, dy, offset, duration in self.player.movement_paths:
-                if offset >= dash_duration:
+            for box, dx, dy, offset, duration in self.player.dash_paths:
+                end = AABB(box.left + dx, box.bottom + dy, box.width, box.height)
+                # 이동 끝에서 거꾸로 검사해 마지막으로 겹쳤던 시각을 얻는다.
+                hit = first_contact_time(end, -dx, -dy, (source.area,))
+                if hit is None or hit == 1:
                     continue
-                ratio = min(1.0, (dash_duration - offset) / duration) if duration else 1.0
-                dx, dy = dx * ratio, dy * ratio
-                hit = first_contact_time(box, dx, dy, (source.area,))
-                if hit is None or hit >= 1:
+                left = grace - max(0.0, dt - offset - duration * (1 - hit))
+                if left <= 0:
                     continue
-                # 경계 접촉 대신 실제로 영역에 들어간 몸체 위치를 기억한다.
-                hit = min(1.0, hit + 1e-7)
-                touched = AABB(box.left + dx * hit, box.bottom + dy * hit, box.width, box.height)
-                left = grace - max(0.0, dt - offset - duration * ratio * hit)
-                if left > 0 and source.area.overlaps(touched):
-                    self._absorb_contacts[source] = (left, touched)
-            if source.area.overlaps(self.player.body):
-                self._absorb_contacts[source] = (grace, self.player.body)
+                contact = end
+                if not source.area.overlaps(end):
+                    distance = min(1.0, hit + 1e-7)
+                    contact = AABB(end.left - dx * distance, end.bottom - dy * distance, box.width, box.height)
+                if source.area.overlaps(contact):
+                    self._absorb_contacts[source] = left, contact
 
     def update(self, dt):
         if self.paused or self.complete:
             return
-        # 마지막 대시 틱 안에서 닿았다면 대시 종료 전에 보류 입력을 판정한다.
-        # 틱 끝의 상태만 보면 실제 접촉까지 끝난 대시로 취급해 놓칠 수 있다.
-        if (self._absorb_input_left > 0 and self.player.state == 'DASH'
-                and 0 < self.player.dash_left <= dt):
-            remaining = self.player.dash_left
+        # 보류 중인 흡수는 같은 틱의 벽·위험 접촉보다 먼저 닿았는지까지 반영한다.
+        horizon = min(dt, self.player.dash_left, self._absorb_input_left)
+        if horizon > 0:
             hit = first_contact_time(
-                self.player.body, self.player.dash_vx * remaining,
-                self.player.dash_vy * remaining,
+                self.player.body, self.player.dash_vx * horizon, self.player.dash_vy * horizon,
                 (source.area for source in self.sources if not source.consumed),
             )
             if hit is not None and hit < 1:
-                contact_dt = remaining * (hit + (1 - hit) * 1e-6)
-                if 0 < contact_dt < remaining:
-                    self.update(contact_dt)
-                    self.update(dt - contact_dt)
-                    return
+                contact_dt = horizon * (hit + (1 - hit) * 1e-6)
+                self._step(contact_dt)
+                if not self.complete:
+                    self._step(dt - contact_dt)
+                return
+        self._step(dt)
+
+    def _step(self, dt):
         self.elapsed += dt
         self.checkpoint_flash = max(0.0, self.checkpoint_flash - dt)
         for platform in self.moving:
@@ -210,13 +261,14 @@ class PlayScene:
         for platform in self.disappearing:
             platform.update(dt, self.player.body)
         self.player.set_move_direction(self.axes()[0])
-        dash_duration = min(dt, self.player.dash_left) if self.player.state == 'DASH' else 0.0
         self._absorb_input_left = max(0.0, self._absorb_input_left - dt)
         self.player.update(dt, self.solids, one_way=self.active_one_way,
                            hazards=self.hazards, death_y=-32, moving_platforms=self.moving)
-        self._update_absorb_contacts(dt, dash_duration)
+        self._update_absorb_contacts(dt)
         if self._absorb_input_left > 0:
-            self.try_absorb()
+            self.try_absorb(self._absorb_direction)
+        if self.player.dash_left == 0:
+            self._absorb_input_left = 0.0
         for platform in self.jump_platforms:
             platform.update(dt, self.player)
         for platform in self.disappearing:
@@ -227,7 +279,7 @@ class PlayScene:
             if not self._was_dead:
                 self.deaths += 1
                 self._was_dead = True
-            self.held_keys.clear()
+            self._clear_input()
             if self.player.death_complete:
                 self.restart()
             return
@@ -241,8 +293,10 @@ class PlayScene:
                     self.checkpoint_flash = 1.5
             if self.exit is not None and self.player.body.overlaps(self.exit):
                 self.complete = True
-                self.held_keys.clear()
+                self._clear_input()
                 self.player.set_move_direction(0)
+        if not self.complete:
+            self._start_buffered_action()
         direction = self.player.dash_vx if self.player.state == 'DASH' else self.player.move_direction
         self.camera.follow(self.player.x, self.player.y + self.player.body_height / 2, direction, dt)
 
