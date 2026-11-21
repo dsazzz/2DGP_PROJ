@@ -1,4 +1,4 @@
 """Run the game with python -m game."""
-from game.main import main
+from game.main import run
 
-main()
+run()
