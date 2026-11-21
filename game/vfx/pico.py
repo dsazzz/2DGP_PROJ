@@ -105,9 +105,12 @@ class StreamingTexture:
         rect = s.SDL_FRect(left, top, w * scale, h * scale)
         center = s.SDL_FPoint(ox * scale, oy * scale)
         s.SDL_SetTextureAlphaMod(self.texture, round(max(0, min(1, opacity)) * 255))
-        status = s.SDL_RenderCopyExF(canvas.renderer, self.texture, None, ctypes.byref(rect),
-                                    -math.degrees(angle), ctypes.byref(center),
-                                    s.SDL_FLIP_HORIZONTAL if flip else s.SDL_FLIP_NONE)
+        if angle or flip:
+            status = s.SDL_RenderCopyExF(canvas.renderer, self.texture, None, ctypes.byref(rect),
+                                        -math.degrees(angle), ctypes.byref(center),
+                                        s.SDL_FLIP_HORIZONTAL if flip else s.SDL_FLIP_NONE)
+        else:
+            status = s.SDL_RenderCopyF(canvas.renderer, self.texture, None, ctypes.byref(rect))
         if status < 0:
             raise RuntimeError(s.SDL_GetError().decode('utf-8', errors='replace'))
 

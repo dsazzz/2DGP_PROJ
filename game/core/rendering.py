@@ -17,6 +17,11 @@ def draw_clip(image, left, bottom, width, height, rad, flip, x, y, w=None, h=Non
         flags |= s.SDL_FLIP_HORIZONTAL
     if 'v' in flip:
         flags |= s.SDL_FLIP_VERTICAL
-    if s.SDL_RenderCopyExF(canvas.renderer, image.texture, ctypes.byref(source),
-                         ctypes.byref(destination), -math.degrees(rad), None, flags) < 0:
+    if rad or flags:
+        status = s.SDL_RenderCopyExF(canvas.renderer, image.texture, ctypes.byref(source),
+                                    ctypes.byref(destination), -math.degrees(rad), None, flags)
+    else:
+        status = s.SDL_RenderCopyF(canvas.renderer, image.texture, ctypes.byref(source),
+                                  ctypes.byref(destination))
+    if status < 0:
         raise RuntimeError(s.SDL_GetError().decode('utf-8', errors='replace'))

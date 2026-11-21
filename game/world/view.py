@@ -54,6 +54,11 @@ class WorldView:
         self.fonts = {}
         self.text_images = {}
         self.tiles = TerrainView(scene.data['tile_layers'])
+        try:
+            self.tiles.preload()
+        except Exception:
+            self.close()
+            raise
 
     def reset(self):
         self.player.reset()
@@ -250,6 +255,7 @@ class WorldView:
             self._zoom_target = None
         self.player.close()
         self.electric_view.close()
+        self.tiles.close()
         for view in self.object_views + self.platform_views:
             view.close()
         self.text_images.clear()
