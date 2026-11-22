@@ -13,7 +13,7 @@ import numpy as np
 from .runtime import Effect
 
 
-@lru_cache(maxsize=10)
+@lru_cache(maxsize=13)
 def _effect_frames(name, options_json):
     """같은 효과 프레임을 모든 개체·재시작에서 공유한다. SDL 자원은 저장하지 않는다."""
     effect = Effect(name, **json.loads(options_json))
