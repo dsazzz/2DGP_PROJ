@@ -239,8 +239,9 @@ class DisappearingPlatformView:
         if not self.frames:
             return
         if self.visual is not None:
-            first = self.frames[0]['rect']
-            source = [first[0], first[1], sum(f['rect'][2] for f in self.frames), first[3]]
+            x, y, w, h = self.visual['source']
+            row_shift = self.frames[0]['rect'][1] - self.frame_sets['READY'][0]['rect'][1]
+            source = [x, y + row_shift, w, h]
             draw_visual(self.visual, self.images, offset, source=source)
             return
         if self.image is None:

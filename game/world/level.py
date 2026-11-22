@@ -149,11 +149,15 @@ def load_ldtk(path, identifier=None):
             x, y = left, bottom + eh
             ew, eh = entity['width'], entity['height']
             thickness = fields.get('Thickness', 8)
-            # Platform art contains transparent space above the contact surface.
+            # 자르기 전후 모두 아틀라스의 같은 접촉 행을 사용한다.
             frame = next((item for item in assets.values() if visual and
-                          item['rect'][:2] == visual['source'][:2] and
+                          item['rect'][0] == visual['source'][0] and
+                          item['rect'][1] <= visual['source'][1] < item['rect'][1] + item['rect'][3] and
                           Path(environment['atlases'][item['atlas']]['image']).name == Path(visual['image']).name), None)
-            surface = frame.get('surface_y_px', 0) / frame['rect'][3] if frame else 0
+            surface = 0
+            if frame and 'surface_y_px' in frame:
+                crop_top, crop_height = visual['source'][1], visual['source'][3]
+                surface = (frame['rect'][1] + frame['surface_y_px'] - crop_top) / crop_height
             area = [left, bottom + eh*(1-surface) - thickness, ew, thickness]
             if kind == 'PlayerSpawn':
                 if spawn is not None:
