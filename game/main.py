@@ -61,9 +61,9 @@ def main(*, vsync=False, profile=False):
             nonlocal view_mode
             view_mode = mode
             size = VIEW_SIZES[mode]
-            direction = scene.camera.direction
             scene.camera = Camera(scene.bounds, size=size)
-            scene.camera.snap(scene.player.x, scene.player.y + scene.player.body_height / 2, direction)
+            scene.camera.snap(scene.player.x, scene.player.y + scene.player.body_height / 2)
+            scene.view.remember_positions()
             scene.view.view_mode = mode
             scene.view.player.zoom = 1.0 if mode == 'logical_1920' else 0.5
 
@@ -119,7 +119,7 @@ def main(*, vsync=False, profile=False):
             if profile and steps:
                 update_steps += steps
                 update_total += draw_start - update_start
-            scene.draw()
+            scene.draw(stepper.alpha)
             present_start = perf_counter()
             p.update_canvas()
             presented = perf_counter()

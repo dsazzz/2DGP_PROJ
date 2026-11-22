@@ -248,6 +248,8 @@ class PlayScene:
                     self._absorb_contacts[source] = left, contact
 
     def update(self, dt):
+        if self.view is not None:
+            self.view.remember_positions()
         if self.paused or self.complete:
             return
         left = s.SDLK_LEFT in self.held_keys or s.SDLK_a in self.held_keys
@@ -317,11 +319,10 @@ class PlayScene:
                 self.player.set_move_direction(0)
         if not self.complete:
             self._start_buffered_action()
-        direction = self.player.dash_vx if self.player.state == 'DASH' else self.player.move_direction
-        self.camera.follow(self.player.x, self.player.y + self.player.body_height / 2, direction, dt)
+        self.camera.follow(self.player.x, self.player.y + self.player.body_height / 2, dt)
 
-    def draw(self):
-        self.view.draw()
+    def draw(self, alpha=1.0):
+        self.view.draw(1.0 if self.paused or self.complete else alpha)
 
     def close(self):
         if self.view is not None:

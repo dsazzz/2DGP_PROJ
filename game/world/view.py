@@ -10,6 +10,7 @@ from pico2d import pico2d as canvas
 import sdl2 as s
 from sdl2 import sdlttf
 
+from game.core.camera import Camera
 from game.core.collision import AABB
 from game.objects.views import (
     AbsorbSourceView, DisappearingPlatformView, JumpPlatformView,
@@ -30,6 +31,8 @@ class WorldView:
         self._zoom_target = None
         self.images = {}
         self.player = PlayerView(scene.player)
+        self.render_camera = Camera(scene.bounds)
+        self.remember_positions()
         self.player.preload()
         for stage in (2, 3):
             effect = PicoEffect('absorbBoost', stage=stage)
@@ -86,10 +89,31 @@ class WorldView:
 
     def reset(self):
         self.player.reset()
+        self.remember_positions()
         for view in self.object_views:
             if isinstance(view, AbsorbSourceView):
                 view.reset()
         self.electric_view.reset()
+
+    def remember_positions(self):
+        """분할 물리 갱신에 들어가기 전, 한 틱의 시작 위치를 보관한다."""
+        scene = self.scene
+        self.previous_camera = scene.camera.offset
+        self.previous_player = scene.player.x, scene.player.y
+        self.previous_platform_x = {obj: obj.area.left for obj in scene.moving}
+
+    def _camera_for_frame(self, alpha):
+        model = self.scene.camera
+        camera = self.render_camera
+        camera.width, camera.height = model.width, model.height
+        x = model.x + (self.previous_camera[0] - model.x) * (1 - alpha)
+        y = model.y + (self.previous_camera[1] - model.y) * (1 - alpha)
+        # 출력 표면의 한 픽셀에 원점을 맞춰 경계 타일도 묶어서 그린다.
+        sx, sy = ctypes.c_float(), ctypes.c_float()
+        s.SDL_RenderGetScale(canvas.renderer, ctypes.byref(sx), ctypes.byref(sy))
+        camera.x = round(x * sx.value) / sx.value
+        camera.y = round(y * sy.value) / sy.value
+        return camera
 
     def update(self, dt):
         scene = self.scene
@@ -145,45 +169,47 @@ class WorldView:
         finally:
             image.opacify(1)
 
-    def background(self):
-        scene = self.scene
-        offset_x, offset_y = scene.camera.offset
+    def background(self, camera=None):
+        camera = camera or self.scene.camera
+        offset_x, offset_y = camera.offset
         image = self.image('backgrounds/lab-wall.png')
         x0 = -(offset_x * .2 % 384)
         y0 = -(offset_y * .1 % 256)
-        for col in range(int(scene.camera.width // 384) + 2):
+        for col in range(int(camera.width // 384) + 2):
             x = x0 + col * 384
-            for row in range(int(scene.camera.height // 256) + 2):
+            for row in range(int(camera.height // 256) + 2):
                 y = y0 + row * 256
                 draw_clip(image, 0, 0, image.w, image.h, 0, '', x + 192, y + 128, 384, 256)
         # 고정 배경 판은 플레이 영역보다 뒤에 두어 기믹과 혼동하지 않는다.
         for world_x, name in ((1152, 'containment'), (2592, 'resonance')):
             x = world_x - offset_x * .85
-            if -640 < x < scene.camera.width:
+            if -640 < x < camera.width:
                 image = self.image('backgrounds/' + name + '.png')
-                draw_clip(image, 0, 0, image.w, image.h, 0, '', x + 320, scene.camera.height / 2, 640, 360)
+                draw_clip(image, 0, 0, image.w, image.h, 0, '', x + 320, camera.height / 2, 640, 360)
 
-    def terrain(self):
-        self.tiles.draw(self.scene.camera, self.images)
+    def terrain(self, camera=None):
+        self.tiles.draw(camera or self.scene.camera, self.images)
 
-    def world(self):
+    def world(self, alpha=1.0):
         scene = self.scene
-        offset = scene.camera.offset
+        camera = self._camera_for_frame(alpha)
+        offset = camera.offset
+        viewport = camera.view
         s.SDL_SetRenderDrawBlendMode(canvas.renderer, s.SDL_BLENDMODE_BLEND)
         s.SDL_SetRenderDrawColor(canvas.renderer, 16, 13, 26, 255)
         s.SDL_RenderClear(canvas.renderer)
-        self.background()
-        self.terrain()
-        self.electric_view.draw(scene.camera)
+        self.background(camera)
+        self.terrain(camera)
+        self.electric_view.draw(camera)
         for view in self.platform_views:
             bounds = AABB(*view.visual['rect']) if view.visual else view.area
-            if scene.camera.visible(bounds):
+            if viewport.overlaps(bounds):
                 view.draw(offset)
         for index, checkpoint in enumerate(scene.data['checkpoints']):
             if checkpoint['terminal'] is None:
                 continue
-            x, y = scene.camera.to_screen(*checkpoint['terminal'])
-            if -64 < x < scene.camera.width + 64:
+            x, y = camera.to_screen(*checkpoint['terminal'])
+            if -64 < x < camera.width + 64:
                 if checkpoint.get('visual'):
                     draw_visual(checkpoint['visual'], self.images, offset)
                 else:
@@ -193,8 +219,8 @@ class WorldView:
                 if index == scene.checkpoint:
                     self.text(x, y + 56, 'SAVED', size=8, color=(122, 216, 181), center=True)
         if scene.exit is not None:
-            x, y = scene.camera.to_screen(scene.exit.left + scene.exit.width / 2, scene.exit.bottom)
-            if -100 < x < scene.camera.width + 100:
+            x, y = camera.to_screen(scene.exit.left + scene.exit.width / 2, scene.exit.bottom)
+            if -100 < x < camera.width + 100:
                 if scene.data.get('exit_visual'):
                     draw_visual(scene.data['exit_visual'], self.images, offset)
                 else:
@@ -204,17 +230,22 @@ class WorldView:
             obj = getattr(view, 'source', getattr(view, 'platform', None))
             visual = getattr(view, 'visual', None)
             bounds = AABB(*visual['rect']) if visual else obj.area
+            draw_offset = offset
             if isinstance(view, MovingPlatformView):
-                bounds = AABB(bounds.left + obj.area.left-obj.start_area.left,
+                shift = (self.previous_platform_x[obj] - obj.area.left) * (1 - alpha)
+                draw_offset = offset[0] - shift, offset[1]
+                bounds = AABB(bounds.left + shift + (obj.area.left - obj.start_area.left if visual else 0),
                               bounds.bottom, bounds.width, bounds.height)
             elif isinstance(view, AbsorbSourceView):
                 bounds = AABB(obj.area.left+obj.area.width/2-96,
                               obj.area.bottom+obj.area.height/2-80, 192, 160)
-            if scene.camera.visible(bounds):
-                view.draw(offset)
-        self.player.draw(offset)
+            if viewport.overlaps(bounds):
+                view.draw(draw_offset)
+        dx = (self.previous_player[0] - scene.player.x) * (1 - alpha)
+        dy = (self.previous_player[1] - scene.player.y) * (1 - alpha)
+        self.player.draw(offset, motion_offset=(dx, dy))
 
-    def draw(self):
+    def draw(self, alpha=1.0):
         scene = self.scene
         if self.view_mode == 'zoom_half':
             if self._zoom_target is None:
@@ -228,7 +259,7 @@ class WorldView:
             s.SDL_RenderSetScale(canvas.renderer, .5, .5)
             canvas.canvas_width, canvas.canvas_height = 1280, 720
             try:
-                self.world()
+                self.world(alpha)
             finally:
                 s.SDL_SetRenderTarget(canvas.renderer, None)
                 s.SDL_RenderSetLogicalSize(canvas.renderer, 640, 360)
@@ -238,7 +269,7 @@ class WorldView:
             width, height = VIEW_SIZES[self.view_mode]
             s.SDL_RenderSetLogicalSize(canvas.renderer, width, height)
             canvas.canvas_width, canvas.canvas_height = width, height
-            self.world()
+            self.world(alpha)
         s.SDL_RenderSetLogicalSize(canvas.renderer, *LOGICAL_SIZE)
         canvas.canvas_width, canvas.canvas_height = LOGICAL_SIZE
         hud_w, hud_h = LOGICAL_SIZE

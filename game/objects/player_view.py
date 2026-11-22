@@ -228,7 +228,7 @@ class PlayerView:
                     })
         self.samples[:] = [sample for sample in self.samples if self.elapsed - sample['time'] < .2]
 
-    def draw(self, offset=(0, 0)):
+    def draw(self, offset=(0, 0), *, motion_offset=(0, 0)):
         self._sync_appearance()
         if (self._state_revision != self.player.state_revision
                 or self._reset_revision != self.player.reset_revision):
@@ -236,7 +236,7 @@ class PlayerView:
         if self.player.death_complete:
             return
         px, py = self.position
-        x, y = px - offset[0], py - offset[1]
+        x, y = px + motion_offset[0] - offset[0], py + motion_offset[1] - offset[1]
         if self.image is None:
             self.image = p.load_image(str(self.assets / self.data['atlas']))
         if self.appearance not in self.glow_images:
