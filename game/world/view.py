@@ -1,14 +1,11 @@
-"""Playable world's rendering and HUD; never changes gameplay state."""
+"""Playable world's rendering; never changes gameplay state."""
 import ctypes
 import json
-import os
-from pathlib import Path
 
 import numpy as np
 import pico2d as p
 from pico2d import pico2d as canvas
 import sdl2 as s
-from sdl2 import sdlttf
 
 from game.core.camera import Camera
 from game.core.collision import AABB
@@ -55,8 +52,6 @@ class WorldView:
                                      for area, visual in zip(scene.one_way, visuals['one_way']))
         self.environment = json.loads((ART_ROOT / 'environment' / 'environment.json').read_text(encoding='utf-8'))
         self.frames = {frame['id']: frame for frame in self.environment['assets']}
-        self.fonts = {}
-        self.text_images = {}
         self.tiles = TerrainView(scene.data['tile_layers'])
         try:
             self._load_backgrounds()
@@ -135,26 +130,6 @@ class WorldView:
         area = s.SDL_FRect(x, canvas.get_canvas_height() - y - height, width, height)
         s.SDL_RenderFillRectF(canvas.renderer, ctypes.byref(area))
 
-    def text(self, x, y, message, *, size=11, color=(218, 215, 233), center=False):
-        if not message:
-            return
-        if size not in self.fonts:
-            path = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts' / 'malgun.ttf'
-            self.fonts[size] = p.load_font(str(path), size)
-        key = message, size, color
-        if key not in self.text_images:
-            if len(self.text_images) >= 96:
-                self.text_images.clear()
-            surface = sdlttf.TTF_RenderUTF8_Blended(
-                self.fonts[size].font, message.encode('utf-8'), s.SDL_Color(*color, 255))
-            if not surface:
-                raise RuntimeError(s.SDL_GetError().decode('utf-8'))
-            texture = s.SDL_CreateTextureFromSurface(canvas.renderer, surface)
-            s.SDL_FreeSurface(surface)
-            self.text_images[key] = p.Image(texture)
-        image = self.text_images[key]
-        draw_clip(image, 0, 0, image.w, image.h, 0, '', x if center else x + image.w / 2, y)
-
     def asset(self, identifier, x, y, scale=.5, opacity=1):
         frame = self.frames[identifier]
         atlas = self.environment['atlases'][frame['atlas']]
@@ -216,8 +191,6 @@ class WorldView:
                     self.asset('terminal', x, y)
                 color = (111, 239, 188, 255) if index <= scene.checkpoint else (128, 119, 157, 160)
                 self.rect(x - 5, y + 29, 10, 3, color)
-                if index == scene.checkpoint:
-                    self.text(x, y + 56, 'SAVED', size=8, color=(122, 216, 181), center=True)
         if scene.exit is not None:
             x, y = camera.to_screen(scene.exit.left + scene.exit.width / 2, scene.exit.bottom)
             if -100 < x < camera.width + 100:
@@ -225,7 +198,6 @@ class WorldView:
                     draw_visual(scene.data['exit_visual'], self.images, offset)
                 else:
                     self.asset('exit_open', x, y)
-                self.text(x, y + 120, 'EXIT', size=12, color=(148, 255, 210), center=True)
         for view in self.object_views:
             obj = getattr(view, 'source', getattr(view, 'platform', None))
             visual = getattr(view, 'visual', None)
@@ -246,7 +218,6 @@ class WorldView:
         self.player.draw(offset, motion_offset=(dx, dy))
 
     def draw(self, alpha=1.0):
-        scene = self.scene
         if self.view_mode == 'zoom_half':
             if self._zoom_target is None:
                 self._zoom_target = s.SDL_CreateTexture(canvas.renderer, s.SDL_PIXELFORMAT_RGBA8888,
@@ -272,36 +243,6 @@ class WorldView:
             self.world(alpha)
         s.SDL_RenderSetLogicalSize(canvas.renderer, *LOGICAL_SIZE)
         canvas.canvas_width, canvas.canvas_height = LOGICAL_SIZE
-        hud_w, hud_h = LOGICAL_SIZE
-        self.rect(12, hud_h-42, hud_w-24, 32, (14, 11, 25, 230))
-        self.rect(12, hud_h-42, 3, 32, (225, 184, 104, 255))
-        self.text(24, hud_h-25, 'GLEAM', size=16, color=(248, 216, 152))
-        minutes, seconds = divmod(int(scene.elapsed), 60)
-        self.text(hud_w-259, hud_h-25, '%02d:%02d   사망 %d   흡수 %d/%d' % (
-            minutes, seconds, scene.deaths, scene.absorbed, len(scene.sources)), size=10)
-        self.rect(12, 10, hud_w-24, 40, (14, 11, 25, 230))
-        self.text(24, 36, scene.section['hint'], size=10)
-        self.text(24, 20, 'R 재시작    Shift+R 처음부터    F5 맵 다시 읽기    P 일시정지    Esc 종료',
-                  size=9, color=(140, 131, 164))
-        self.text(hud_w/2, 64, {'normal': 'F6: 640x360', 'zoom_half': 'F7: 0.5x / 640x360',
-                            'logical_960': 'F8: 960x540', 'logical_1280': 'F9: 1280x720',
-                            'logical_1920': 'F10: 1920x1080 / player 1x'}[self.view_mode]
-                  + '   |   F6-F10', size=10, center=True)
-        if scene.checkpoint_flash:
-            self.text(hud_w/2, hud_h-66, 'CHECKPOINT SAVED', size=12, color=(135, 247, 199), center=True)
-        if scene.paused or scene.complete:
-            cx, cy = hud_w/2, hud_h/2
-            self.rect(0, 0, hud_w, hud_h, (8, 6, 16, 205))
-            self.rect(cx-196, cy-70, 392, 140, (23, 19, 37, 255))
-            self.rect(cx-196, cy+66, 392, 2, (231, 193, 119, 255))
-            if scene.complete:
-                self.text(cx, cy-6, '%02d:%02d  /  사망 %d  /  흡수 %d/%d' % (
-                    minutes, seconds, scene.deaths, scene.absorbed, len(scene.sources)), center=True)
-                self.text(cx, cy-41, 'Enter 또는 R  다시 플레이', center=True)
-            else:
-                self.text(cx, cy+34, 'PAUSED', size=24, color=(247, 219, 161), center=True)
-                self.text(cx, cy-15, 'Enter / P  계속하기', center=True)
-                self.text(cx, cy-43, 'R  체크포인트 재시작', size=10, center=True)
 
     def close(self):
         if self._zoom_target is not None:
@@ -312,8 +253,4 @@ class WorldView:
         self.tiles.close()
         for view in self.object_views + self.platform_views:
             view.close()
-        self.text_images.clear()
         self.images.clear()
-        for font in self.fonts.values():
-            sdlttf.TTF_CloseFont(font.font)
-        self.fonts.clear()
