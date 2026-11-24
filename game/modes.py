@@ -17,23 +17,17 @@ from game.world.scene import PlayScene
 VIEW_KEYS = dict(zip((s.SDLK_F6, s.SDLK_F7, s.SDLK_F8, s.SDLK_F9, s.SDLK_F10), VIEW_SIZES))
 
 
-FRAME_LIMITS = (60, 120, 144)
-
-
 class GameModes:
     def __init__(self, settings_file=None):
         self.scene = None
         self.settings_file = settings_file or PROJECT_ROOT / '.local/settings.json'
         self.view_mode = DEFAULT_VIEW_MODE
-        self.fps = 144
         self.fullscreen = False
         self.volumes = {'master': 100, 'music': 100, 'effects': 100}
         self.settings_notice = ''
         try:
             settings = json.loads(self.settings_file.read_text(encoding='utf-8'))
             if isinstance(settings, dict):
-                if settings.get('fps') in FRAME_LIMITS:
-                    self.fps = settings['fps']
                 self.fullscreen = settings.get('fullscreen') is True
                 for key in self.volumes:
                     value = settings.get(key)
@@ -71,7 +65,7 @@ class GameModes:
         try:
             self.settings_file.parent.mkdir(parents=True, exist_ok=True)
             temp = self.settings_file.with_suffix('.tmp')
-            temp.write_text(json.dumps({'fps': self.fps, 'view': self.view_mode,
+            temp.write_text(json.dumps({'view': self.view_mode,
                                        'fullscreen': self.fullscreen, **self.volumes}), encoding='utf8')
             temp.replace(self.settings_file)
         except OSError as exc:

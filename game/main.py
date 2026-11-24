@@ -22,8 +22,8 @@ def main(*, vsync=False, profile=False):
     try:
         game = GameModes()
         game.apply_settings()
-        vsync_active, display_refresh = configure_display(vsync, profile, game.fps)
-        GameFramework(game, vsync_active=vsync_active, display_refresh=display_refresh, profile=profile).run()
+        configure_display(profile)
+        GameFramework(game, profile=profile).run()
     finally:
         if game is not None:
             game.close()

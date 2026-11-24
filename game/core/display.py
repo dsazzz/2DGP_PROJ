@@ -35,23 +35,18 @@ def set_fullscreen(enabled):
     return True
 
 
-def configure_display(vsync, profile, fps):
-    renderer_info = s.SDL_RendererInfo()
-    s.SDL_GetRendererInfo(canvas.renderer, ctypes.byref(renderer_info))
-    vsync_active = vsync and bool(renderer_info.flags & s.SDL_RENDERER_PRESENTVSYNC)
+def configure_display(profile):
     s.SDL_RenderSetLogicalSize(canvas.renderer, *LOGICAL_SIZE)
     canvas.canvas_width, canvas.canvas_height = LOGICAL_SIZE
     s.SDL_SetWindowTitle(canvas.window, b'GLEAM')
-    display_refresh = 0
-    if profile or vsync_active:
+    if profile:
+        renderer_info = s.SDL_RendererInfo()
+        s.SDL_GetRendererInfo(canvas.renderer, ctypes.byref(renderer_info))
         display = s.SDL_DisplayMode()
         index = s.SDL_GetWindowDisplayIndex(canvas.window)
         s.SDL_GetCurrentDisplayMode(index, ctypes.byref(display))
-        display_refresh = display.refresh_rate
-    if profile:
         backend = renderer_info.name.decode('utf-8') if renderer_info.name else 'unknown'
         acceleration = 'GPU' if renderer_info.flags & s.SDL_RENDERER_ACCELERATED else 'software'
-        pacing = 'VSync' if vsync_active else f'{fps} FPS cap'
+        pacing = 'VSync' if renderer_info.flags & s.SDL_RENDERER_PRESENTVSYNC else 'uncapped'
         refresh = f'{display.refresh_rate} Hz' if display.refresh_rate else 'unknown refresh rate'
         print(f'GLEAM | {backend} ({acceleration}) | {refresh} | {pacing}', flush=True)
-    return vsync_active, display_refresh

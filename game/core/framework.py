@@ -8,15 +8,6 @@ import sdl2 as s
 from game.core.loop import FIXED_DT, FixedStep
 
 
-def wait_for_frame(deadline):
-    remaining_ms = int((deadline - perf_counter()) * 1000) - 1
-    if remaining_ms > 0:
-        s.SDL_Delay(remaining_ms)
-    # SDL_Delay의 오차를 피해 마지막 구간은 고해상도 시계로 맞춘다.
-    while perf_counter() < deadline:
-        pass
-
-
 def poll_events():
     events = []
     event = s.SDL_Event()
@@ -27,17 +18,15 @@ def poll_events():
 
 
 class GameFramework:
-    def __init__(self, game, *, vsync_active=False, display_refresh=0, profile=False):
+    def __init__(self, game, *, profile=False):
         self.game = game
-        self.vsync_active = vsync_active
-        self.display_refresh = display_refresh
         self.profile = profile
 
     def run(self):
         game = self.game
         stepper = FixedStep(clock=perf_counter)
         mode = game.mode
-        frame_deadline = sample_start = perf_counter()
+        sample_start = perf_counter()
         frames = update_steps = 0
         update_total = draw_total = present_total = 0.0
         while game.running:
@@ -80,11 +69,4 @@ class GameFramework:
                     frames = update_steps = 0
                     update_total = draw_total = present_total = 0.0
             if game.after_present():
-                frame_deadline = perf_counter()
-                stepper.reset(frame_deadline)
-            frame_dt = 1 / game.fps
-            if not self.vsync_active or game.fps < self.display_refresh:
-                frame_deadline += frame_dt
-                if frame_deadline <= now:
-                    frame_deadline = now + frame_dt
-                wait_for_frame(frame_deadline)
+                stepper.reset()
