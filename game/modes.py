@@ -7,6 +7,7 @@ import sdl2 as s
 from game.core.camera import Camera
 from game.core.display import DEFAULT_VIEW_MODE, VIEW_SIZES
 from game.core.paths import ART_ROOT, PROJECT_ROOT
+from game.title import Title
 from game.world.level import load_ldtk
 from game.world.scene import PlayScene
 
@@ -30,7 +31,8 @@ class GameModes:
                     self.fps = settings['fps']
         except (OSError, ValueError):
             pass
-        self.enter('loading')
+        self.title = None
+        self.enter('title')
 
     def enter(self, mode):
         self.mode = mode
@@ -62,6 +64,9 @@ class GameModes:
 
     def after_present(self):
         """로딩 화면을 제출한 뒤 맵을 읽고 물리 시계를 다시 맞춘다."""
+        if self.mode == 'title' and self.title and self.title.finished():
+            self.title = None
+            self.enter('loading')
         if self.mode != 'loading':
             return False
         self.load()
@@ -87,6 +92,14 @@ class GameModes:
     def handle_events(self, events):
         if any(e.type == s.SDL_QUIT for e in events):
             self.enter('quit')
+            return
+        if self.mode == 'title':
+            if self.title is None:
+                self.title = Title()
+            for event in events:
+                self.title.handle(event, self)
+                if not self.running:
+                    break
             return
         if self.mode == 'play':
             for i, event in enumerate(events):
@@ -118,11 +131,14 @@ class GameModes:
                 return
 
     def draw(self, alpha):
-        if self.scene:
+        if self.mode == 'title':
+            self.title.draw(self)
+        elif self.scene:
             self.scene.draw(alpha if self.updating else 1.0)
         else:
             p.clear_canvas()
 
     def close(self):
+        self.title = None
         if self.scene:
             self.scene.close()

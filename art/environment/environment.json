@@ -3,6 +3,16 @@
   "coordinate_system": "PNG top-left, x right, y down; rect is [x,y,width,height]",
   "sampling": "nearest",
   "atlases": {
+    "title_sleep": {
+      "image": "backgrounds/title-sleep.png",
+      "size": [1920, 1080],
+      "sha256": "3498fbf875fd69c4bb79a4af44812ba339957e34e06eff53837a7c5c9f38366a"
+    },
+    "title_awake": {
+      "image": "backgrounds/title-awake.png",
+      "size": [60, 76],
+      "sha256": "8a5cbba98de955f0e904bec563b815657dc1cc77b7beb712081e301032bbb78f"
+    },
     "platforms": {
       "image": "objects/platforms.png",
       "size": [
