@@ -2,10 +2,12 @@
 import json
 
 import pico2d as p
+from pico2d import pico2d as canvas
+from sdl2 import sdlmixer
 import sdl2 as s
 
 from game.core.camera import Camera
-from game.core.display import DEFAULT_VIEW_MODE, VIEW_SIZES
+from game.core.display import DEFAULT_VIEW_MODE, VIEW_SIZES, set_fullscreen
 from game.core.paths import ART_ROOT, PROJECT_ROOT
 from game.title import Title
 from game.world.level import load_ldtk
@@ -13,6 +15,8 @@ from game.world.scene import PlayScene
 
 
 VIEW_KEYS = dict(zip((s.SDLK_F6, s.SDLK_F7, s.SDLK_F8, s.SDLK_F9, s.SDLK_F10), VIEW_SIZES))
+
+
 FRAME_LIMITS = (60, 120, 144)
 
 
@@ -22,17 +26,57 @@ class GameModes:
         self.settings_file = settings_file or PROJECT_ROOT / '.local/settings.json'
         self.view_mode = DEFAULT_VIEW_MODE
         self.fps = 144
+        self.fullscreen = False
+        self.volumes = {'master': 100, 'music': 100, 'effects': 100}
+        self.settings_notice = ''
         try:
             settings = json.loads(self.settings_file.read_text(encoding='utf-8'))
             if isinstance(settings, dict):
-                if settings.get('view') in tuple(VIEW_SIZES):
-                    self.view_mode = settings['view']
                 if settings.get('fps') in FRAME_LIMITS:
                     self.fps = settings['fps']
+                self.fullscreen = settings.get('fullscreen') is True
+                for key in self.volumes:
+                    value = settings.get(key)
+                    if type(value) is int:
+                        self.volumes[key] = max(0, min(100, value))
+                if settings.get('view') in tuple(VIEW_SIZES):
+                    self.view_mode = settings['view']
         except (OSError, ValueError):
             pass
         self.title = None
         self.enter('title')
+
+    def apply_volume(self):
+        if canvas.audio_on and sdlmixer.Mix_QuerySpec(None, None, None):
+            master = self.volumes['master'] * 128 / 10000
+            sdlmixer.Mix_VolumeMusic(round(master * self.volumes['music']))
+            sdlmixer.Mix_Volume(-1, round(master * self.volumes['effects']))
+
+    def apply_settings(self):
+        if self.fullscreen and not set_fullscreen(True):
+            self.fullscreen = False
+            self.settings_notice = '1920×1080 전체화면을 사용할 수 없습니다.'
+        self.apply_volume()
+
+    def change_setting(self, key, direction):
+        self.settings_notice = ''
+        if key == 'fullscreen':
+            if not set_fullscreen(not self.fullscreen):
+                self.settings_notice = '화면 모드를 변경할 수 없습니다.'
+                return
+            self.fullscreen = not self.fullscreen
+        else:
+            self.volumes[key] = max(0, min(100, self.volumes[key] + 10 * direction))
+            self.apply_volume()
+        try:
+            self.settings_file.parent.mkdir(parents=True, exist_ok=True)
+            temp = self.settings_file.with_suffix('.tmp')
+            temp.write_text(json.dumps({'fps': self.fps, 'view': self.view_mode,
+                                       'fullscreen': self.fullscreen, **self.volumes}), encoding='utf8')
+            temp.replace(self.settings_file)
+        except OSError as exc:
+            self.settings_notice = '설정 파일을 저장할 수 없습니다.'
+            print(f'Could not save settings: {exc}', flush=True)
 
     def enter(self, mode):
         self.mode = mode
