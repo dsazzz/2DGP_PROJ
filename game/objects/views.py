@@ -4,9 +4,9 @@ from functools import lru_cache
 
 import pico2d as p
 
+from game.core.collision import AABB
 from game.core.paths import ART_ROOT
 from game.core.rendering import draw_clip
-from game.vfx.pico import PicoEffect
 from game.vfx.electric import ElectricEffect
 
 
@@ -73,42 +73,54 @@ def _draw_platform(image, frames, area, offset):
 class AbsorbSourceView:
     """효과의 생성·갱신·출력·정리만 소유한다. 판정과 보상은 변경하지 않는다."""
 
-    def __init__(self, source):
+    vanish_time = .3
+    idle_frames = 24
+    idle_fps = 20
+    visual_scale = 40 / 28
+
+    def __init__(self, source, image=None):
         self.source = source
-        self.effect = None
+        self.image = image
         self.reset()
 
     def reset(self):
-        self.close()
         self._consumed = self.source.consumed
-        if not self._consumed:
-            self.effect = PicoEffect('source')
-            self.effect.prerender_loop()
+        self.vanish_left = 0.0
+        self.idle_age = 0.0
 
     def update(self, dt):
-        if not self.source.consumed and self._consumed:
-            self.reset()
-        elif self.source.consumed and not self._consumed:
-            phase = self.effect.effect.time if self.effect is not None else 0
-            self.close()
-            self.effect = PicoEffect('lightAbsorb', idle_phase=phase)
-            self._consumed = True
-        if self.effect is not None:
-            self.effect.update(dt)
-            if self.effect.done():
-                self.close()
+        if self.source.consumed != self._consumed:
+            self._consumed = self.source.consumed
+            self.vanish_left = self.vanish_time if self._consumed else 0.0
+        self.vanish_left = max(0.0, self.vanish_left - dt)
+        if not self._consumed:
+            self.idle_age = (self.idle_age + dt) % (self.idle_frames / self.idle_fps)
+
+    @property
+    def draw_area(self):
+        area = self.source.area
+        width, height = area.width * self.visual_scale, area.height * self.visual_scale
+        return AABB(area.left + (area.width - width) / 2, area.bottom + (area.height - height) / 2,
+                    width, height)
 
     def draw(self, offset=(0, 0)):
-        if self.effect is not None:
-            area = self.source.area
-            x = area.left + area.width / 2 - offset[0]
-            y = area.bottom + area.height / 2 - offset[1]
-            self.effect.draw(x, y, scale=1, layer='front')
+        if self.source.consumed:
+            if self.vanish_left <= 0:
+                return
+            frame = min(5, int((1 - self.vanish_left / self.vanish_time) * 6))
+            bottom = 0
+        else:
+            frame = min(self.idle_frames - 1, int(self.idle_age * self.idle_fps))
+            bottom = 64
+        if self.image is None:
+            self.image = p.load_image(str(ART_ROOT / 'environment/objects/dash-orb-fx.png'))
+        area = self.draw_area
+        x = area.left + area.width / 2 - offset[0]
+        y = area.bottom + area.height / 2 - offset[1]
+        draw_clip(self.image, frame * 64, bottom, 64, 64, 0, '', x, y, area.width, area.height)
 
     def close(self):
-        if self.effect is not None:
-            self.effect.close()
-            self.effect = None
+        self.image = None
 
 
 class JumpPlatformView:

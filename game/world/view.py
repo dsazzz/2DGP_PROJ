@@ -34,7 +34,8 @@ class WorldView:
         for stage in (2, 3):
             effect = PicoEffect('absorbBoost', stage=stage)
             effect.prerender()
-        self.object_views = tuple(AbsorbSourceView(obj) for obj in scene.sources)
+        orb = self.image('objects/dash-orb-fx.png') if scene.sources else None
+        self.object_views = tuple(AbsorbSourceView(obj, orb) for obj in scene.sources)
         visuals = scene.data['visuals']
         self.object_views += tuple(
             view(obj, visual=visual, images=self.images)
@@ -209,8 +210,7 @@ class WorldView:
                 bounds = AABB(bounds.left + shift + (obj.area.left - obj.start_area.left if visual else 0),
                               bounds.bottom, bounds.width, bounds.height)
             elif isinstance(view, AbsorbSourceView):
-                bounds = AABB(obj.area.left+obj.area.width/2-96,
-                              obj.area.bottom+obj.area.height/2-80, 192, 160)
+                bounds = view.draw_area
             if viewport.overlaps(bounds):
                 view.draw(draw_offset)
         dx = (self.previous_player[0] - scene.player.x) * (1 - alpha)

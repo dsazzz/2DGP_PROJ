@@ -28,6 +28,16 @@
       "source": "art/sources/pause/generated.png",
       "sha256": "c36c7a76a8ecb9d8c7bb33e694ef9d5ec90ca459bcb72296b111eaf876260c6e"
     },
+    "dash_orb_fx": {
+      "image": "objects/dash-orb-fx.png",
+      "size": [1536, 128],
+      "cell_size": [64, 64],
+      "layout": "top: 24 soft inward swirl frames at 20 fps; bottom: 6 absorb frames over 0.3s",
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "source": "art/sources/absorb-light/generated.png",
+      "sha256": "121594d26300b6bbbc358ec40e7488bf2513c69c4bb6570dbcc9bef21036c3af"
+    },
     "platforms": {
       "image": "objects/platforms.png",
       "size": [
