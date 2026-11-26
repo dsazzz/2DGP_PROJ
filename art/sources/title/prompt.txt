@@ -1,0 +1,1 @@
+Remove only the three menu lines and their cursor from the supplied crop. Preserve the camera, dark slate floor, existing light and visible fox hair. Reuse the original lettering and cursor as separate transparent game textures.

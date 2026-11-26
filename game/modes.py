@@ -1,5 +1,6 @@
 """게임 모드 전환. 물리 갱신은 플레이 중에만 실행한다."""
 import json
+from time import perf_counter
 
 import pico2d as p
 from pico2d import pico2d as canvas
@@ -9,6 +10,7 @@ import sdl2 as s
 from game.core.camera import Camera
 from game.core.display import DEFAULT_VIEW_MODE, VIEW_SIZES, set_fullscreen
 from game.core.paths import ART_ROOT, PROJECT_ROOT
+from game.menu import Menu
 from game.title import Title
 from game.world.level import load_ldtk
 from game.world.scene import PlayScene
@@ -38,6 +40,7 @@ class GameModes:
         except (OSError, ValueError):
             pass
         self.title = None
+        self.menu = Menu()
         self.enter('title')
 
     def apply_volume(self):
@@ -74,6 +77,11 @@ class GameModes:
 
     def enter(self, mode):
         self.mode = mode
+        if mode in ('title', 'pause'):
+            self.menu.reset()
+        if mode == 'title' and self.scene is not None:
+            self.scene.close()
+            self.scene = None
         if self.scene:
             self.scene.paused = mode != 'play'
             self.scene._clear_input()
@@ -134,11 +142,8 @@ class GameModes:
         if self.mode == 'title':
             if self.title is None:
                 self.title = Title()
-            for event in events:
-                self.title.handle(event, self)
-                if not self.running:
-                    break
-            return
+            if self.title.wake_start is not None:
+                return
         if self.mode == 'play':
             for i, event in enumerate(events):
                 key = event.key.keysym.sym if event.type == s.SDL_KEYDOWN and not event.key.repeat else None
@@ -156,21 +161,35 @@ class GameModes:
             if event.type != s.SDL_KEYDOWN or event.key.repeat:
                 continue
             key = event.key.keysym.sym
-            if self.mode == 'pause':
-                if key in (s.SDLK_p, s.SDLK_ESCAPE, s.SDLK_RETURN):
-                    self.enter('play')
+            if self.mode == 'pause' and not self.menu.settings:
+                if key in (s.SDLK_p, s.SDLK_r, s.SDLK_F5):
+                    if key == s.SDLK_r:
+                        self.scene.restart()
+                    self.enter('loading' if key == s.SDLK_F5 else 'play')
                     return
-                if key == s.SDLK_r:
+            if self.mode in ('title', 'pause'):
+                action = self.menu.handle(key, self)
+                if action == 'start':
+                    self.title.wake_start = perf_counter()
+                    return
+                if action == 'restart':
                     self.scene.restart()
-                    self.enter('play')
+                    action = 'play'
+                if action is not None:
+                    self.enter(action)
                     return
+                continue
             if key == s.SDLK_F5 or (self.mode == 'ending' and key in (s.SDLK_RETURN, s.SDLK_r)):
                 self.enter('loading')
                 return
 
     def draw(self, alpha):
         if self.mode == 'title':
+            if self.title is None:
+                self.title = Title()
             self.title.draw(self)
+        elif self.mode == 'pause':
+            self.menu.draw_pause(self)
         elif self.scene:
             self.scene.draw(alpha if self.updating else 1.0)
         else:
@@ -178,5 +197,6 @@ class GameModes:
 
     def close(self):
         self.title = None
+        self.menu.close()
         if self.scene:
             self.scene.close()

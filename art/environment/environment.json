@@ -6,12 +6,27 @@
     "title_sleep": {
       "image": "backgrounds/title-sleep.png",
       "size": [1920, 1080],
-      "sha256": "3498fbf875fd69c4bb79a4af44812ba339957e34e06eff53837a7c5c9f38366a"
+      "sha256": "b23ef1aaeeb2cf8e4b24f7dd71ee8625e3e9f70a5752aca413be97f7da15e45e"
     },
     "title_awake": {
       "image": "backgrounds/title-awake.png",
-      "size": [60, 76],
-      "sha256": "8a5cbba98de955f0e904bec563b815657dc1cc77b7beb712081e301032bbb78f"
+      "size": [60, 84],
+      "sha256": "283618882abb0ad8406b1a4f1c2ca6584804f3671f75e9847e74650ed089adef"
+    },
+    "title_cursor": {
+      "image": "backgrounds/title-cursor.png",
+      "size": [39, 45],
+      "source": "art/sources/title/reference.png",
+      "art_source": "existing",
+      "sha256": "b1a5f18e709a6aba2c908c0655771420461bb6d072a5080f881fb4511f73240c"
+    },
+    "pause": {
+      "image": "backgrounds/pause.png",
+      "size": [1920, 1080],
+      "art_source": "host_image",
+      "route": "host:image_gen",
+      "source": "art/sources/pause/generated.png",
+      "sha256": "c36c7a76a8ecb9d8c7bb33e694ef9d5ec90ca459bcb72296b111eaf876260c6e"
     },
     "platforms": {
       "image": "objects/platforms.png",
